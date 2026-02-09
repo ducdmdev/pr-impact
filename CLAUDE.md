@@ -1,0 +1,116 @@
+# CLAUDE.md — pr-impact
+
+## Project overview
+
+pr-impact is a PR analysis tool that detects breaking changes, test coverage gaps, stale documentation, and import-graph impact for pull requests. It produces a weighted risk score and generates Markdown or JSON reports.
+
+This is a **pnpm monorepo** managed with **Turborepo**. The workspace is defined in `pnpm-workspace.yaml` and contains three packages under `packages/`.
+
+## Quick commands
+
+```bash
+pnpm build                                    # Build all packages (via turbo, respects dependency order)
+pnpm test                                     # Run all tests (vitest, workspace mode)
+npx vitest run packages/core/__tests__/FILE.test.ts  # Run a single test file
+pnpm build --filter=@pr-impact/core           # Build only @pr-impact/core
+pnpm build --filter=@pr-impact/cli            # Build only @pr-impact/cli
+pnpm clean                                    # Remove all dist/ directories
+```
+
+## Architecture
+
+```
+packages/
+  core/       @pr-impact/core      — Analysis engine. Pure logic, no I/O except git via simple-git.
+  cli/        @pr-impact/cli       — Commander-based CLI (`pri`). Depends on core.
+  mcp-server/ @pr-impact/mcp-server — MCP server exposing tools to LLMs. Depends on core.
+```
+
+### packages/core (the main package)
+
+All analysis logic lives here. Source is organized by analysis layer:
+
+```
+src/
+  analyzer.ts               — Top-level analyzePR() orchestrator (runs steps in parallel)
+  types.ts                  — All shared TypeScript interfaces
+  index.ts                  — Barrel exports for the public API
+  diff/
+    diff-parser.ts          — Parse git diff into ChangedFile[]
+    file-categorizer.ts     — Classify files as source/test/doc/config/other
+  breaking/
+    detector.ts             — Detect breaking changes across changed files
+    export-differ.ts        — Diff exported symbols between base and head (regex-based)
+    signature-differ.ts     — Compare function/class signatures for changes
+  coverage/
+    coverage-checker.ts     — Check whether changed source files have test changes
+    test-mapper.ts          — Map source files to their expected test files
+  docs/
+    staleness-checker.ts    — Find stale references in doc files
+  impact/
+    impact-graph.ts         — Build import dependency graph from changed files
+  risk/
+    risk-calculator.ts      — Calculate weighted risk score from all factors
+    factors.ts              — Individual risk factor evaluators with weights
+  output/
+    markdown-reporter.ts    — Format PRAnalysis as Markdown
+    json-reporter.ts        — Format PRAnalysis as JSON
+```
+
+### packages/cli
+
+Commander-based CLI binary (`pri`). Commands live in `src/commands/`:
+- `analyze.ts` — full analysis
+- `breaking.ts` — breaking changes only
+- `impact.ts` — impact graph only
+- `risk.ts` — risk score only
+
+Dependencies: commander, chalk, ora.
+
+### packages/mcp-server
+
+MCP server exposing tools via `@modelcontextprotocol/sdk`. Tool definitions live in `src/tools/`:
+- `analyze-diff.ts`
+- `get-breaking-changes.ts`
+- `get-impact-graph.ts`
+- `get-risk-score.ts`
+
+Dependencies: @modelcontextprotocol/sdk, zod.
+
+## Code conventions
+
+- **ESM only** — all packages use `"type": "module"`. Use `.js` extensions in all import paths (even for `.ts` source files), e.g. `import { parseDiff } from './diff/diff-parser.js'`.
+- **TypeScript strict mode** — `tsconfig.base.json` sets `"strict": true`, target ES2022, module ES2022 with bundler resolution.
+- **All shared types** are defined in `packages/core/src/types.ts`. Import types from there.
+- **Barrel exports** — the public API of `@pr-impact/core` is defined in `packages/core/src/index.ts`. Any new public function or type must be re-exported from this file.
+- **tsup** is used for bundling all packages. Config: ESM format, dts generation, sourcemaps, clean output.
+- **Turbo** task graph: `build` depends on `^build` (dependency packages build first); `test` depends on `build`.
+
+## Key patterns
+
+- **Git operations** use `simple-git` (the `simpleGit()` function). All git calls go through this library, never raw `child_process`.
+- **File discovery** uses `fast-glob` for finding files in the repo.
+- **Export parsing** uses **regex-based parsing** (not tree-sitter or AST). See `export-differ.ts`.
+- **Risk scoring** uses six weighted factors (defined in `risk/factors.ts`):
+  - Breaking changes — weight 0.30
+  - Untested changes — weight 0.25
+  - Diff size — weight 0.15
+  - Stale documentation — weight 0.10
+  - Config file changes — weight 0.10
+  - Impact breadth — weight 0.10
+- **Parallel analysis** — `analyzePR()` runs breaking-change detection, test coverage, doc staleness, and impact graph building concurrently via `Promise.all`.
+
+## Testing guidelines
+
+- Tests use **vitest** and live in `packages/core/__tests__/`.
+- Test file naming convention: `MODULE_NAME.test.ts` (e.g. `export-differ.test.ts`, `risk-calculator.test.ts`).
+- Only the `packages/core` workspace is included in the vitest workspace config (`vitest.workspace.ts`).
+- Write **unit tests only** — do not write integration tests that require a real git repository.
+- **Mock git operations** (simple-git calls) where needed; tests should not depend on filesystem or git state.
+- Existing test files:
+  - `export-differ.test.ts`
+  - `file-categorizer.test.ts`
+  - `json-reporter.test.ts`
+  - `markdown-reporter.test.ts`
+  - `risk-calculator.test.ts`
+  - `signature-differ.test.ts`

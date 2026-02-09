@@ -1,0 +1,24 @@
+{
+  "name": "@pr-impact/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "pri": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@pr-impact/core": "workspace:*",
+    "commander": "^13.0.0",
+    "chalk": "^5.4.0",
+    "ora": "^8.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "~5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

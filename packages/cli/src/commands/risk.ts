@@ -62,8 +62,8 @@ export function registerRiskCommand(program: Command): void {
   program
     .command('risk')
     .description('Calculate and display PR risk score')
-    .argument('[base]', 'Base branch', undefined)
-    .argument('[head]', 'Head branch', undefined)
+    .argument('[base]', 'Base branch (default: auto-detect main/master)')
+    .argument('[head]', 'Head branch (default: HEAD)')
     .option('--threshold <n>', 'Fail if risk score >= threshold', parseFloat)
     .option('--format <type>', 'Output format: text | json', 'text')
     .option('--repo <path>', 'Repository path', process.cwd())

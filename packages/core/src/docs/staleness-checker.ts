@@ -49,9 +49,14 @@ export async function checkDocStaleness(
   }
 
   // ---- 3. Pre-compile symbol regexes for efficient scanning ----------------
+  // For generic names (index, types, utils, etc.) use a stricter regex that
+  // only matches when the name appears in a file-path or import context,
+  // avoiding false positives from ordinary English prose.
   const symbolPatterns = removedSymbols.map((sym) => ({
     ...sym,
-    regex: new RegExp(`\\b${escapeRegex(sym.name)}\\b`),
+    regex: sym.isGeneric
+      ? buildPathContextRegex(sym.name)
+      : new RegExp(`\\b${escapeRegex(sym.name)}\\b`),
   }));
 
   // ---- 4. Scan doc files for stale references ---------------------------
@@ -117,6 +122,8 @@ export async function checkDocStaleness(
 interface RemovedSymbol {
   name: string;
   sourceFile: string;
+  /** When true, only match in file-path or import contexts (not standalone prose). */
+  isGeneric?: boolean;
 }
 
 interface RenamedPath {
@@ -157,10 +164,16 @@ async function collectRemovedSymbols(
     }
 
     if (file.status === 'deleted') {
-      // Use the filename stem as a symbol reference
+      // Use the filename stem as a symbol reference.
+      // Generic names (e.g. "types", "utils") are still tracked but flagged
+      // so the scanner uses a stricter path-context-only regex for them.
       const stem = filenameStem(file.path);
-      if (stem && !isGenericName(stem)) {
-        removed.push({ name: stem, sourceFile: file.path });
+      if (stem) {
+        removed.push({
+          name: stem,
+          sourceFile: file.path,
+          isGeneric: isGenericName(stem),
+        });
       }
 
       // Also extract exported symbols from the base version
@@ -248,6 +261,48 @@ function isGenericName(name: string): boolean {
     'config',
   ]);
   return GENERIC.has(name.toLowerCase());
+}
+
+/**
+ * Build a regex that matches a generic name only when it appears in a
+ * file-path or import/require context inside documentation.  This avoids
+ * false positives where common English words like "index" or "main" appear
+ * naturally in prose.
+ *
+ * Matched patterns (examples for name = "types"):
+ *   File path contexts:
+ *     ./types          ../types         src/types        path/to/types
+ *     types.ts         types.js         types.mjs        types.d.ts
+ *     types/           /types
+ *   Import / require contexts:
+ *     from './types'   from "../types"  from 'types'
+ *     import types     import { x } from "types"
+ *     require('./types')  require("types")
+ *   Code-fenced / backtick references:
+ *     `types`          `types.ts`
+ */
+function buildPathContextRegex(name: string): RegExp {
+  const n = escapeRegex(name);
+
+  // Each alternative captures a distinct context where a generic name is
+  // actually a code / file reference rather than plain English.
+  const alternatives = [
+    // 1. Preceded by a path separator: ./types, ../types, foo/types
+    `(?:[./\\\\])${n}\\b`,
+    // 2. Followed by a file extension: types.ts, types.js, types.mjs, types.d.ts
+    `\\b${n}(?:\\.d)?\\.(?:ts|js|mjs|cjs|tsx|jsx|mts|cts)\\b`,
+    // 3. Followed by a directory separator: types/
+    `\\b${n}/`,
+    // 4. Inside an import/require statement:
+    //    from 'types'  |  from './types'  |  import types  |  require('types')
+    `(?:from\\s+['"\`][^'"\`]*\\b${n}\\b[^'"\`]*['"\`])`,
+    `(?:import\\s+${n}\\b)`,
+    `(?:require\\s*\\(\\s*['"\`][^'"\`]*\\b${n}\\b[^'"\`]*['"\`]\\s*\\))`,
+    // 5. Inside backticks in Markdown: `types` or `types.ts`
+    `\`[^\`]*\\b${n}\\b[^\`]*\``,
+  ];
+
+  return new RegExp(alternatives.join('|'), 'i');
 }
 
 /** Safely read a file from a git branch, returning null on failure. */

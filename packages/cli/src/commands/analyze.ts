@@ -9,8 +9,8 @@ export function registerAnalyzeCommand(program: Command): void {
   program
     .command('analyze')
     .description('Run full PR impact analysis')
-    .argument('[base]', 'Base branch', undefined)
-    .argument('[head]', 'Head branch', undefined)
+    .argument('[base]', 'Base branch (default: auto-detect main/master)')
+    .argument('[head]', 'Head branch (default: HEAD)')
     .option('--format <type>', 'Output format: md | json', 'md')
     .option('--output <file>', 'Write to file instead of stdout')
     .option('--repo <path>', 'Repository path', process.cwd())

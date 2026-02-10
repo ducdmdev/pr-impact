@@ -14,22 +14,22 @@ export function formatImpactGraph(graph: ImpactGraph, filePath?: string): string
     lines.push('');
 
     if (isDirectlyChanged) {
-      lines.push(`This file is **directly changed** in the PR.`);
+      lines.push('This file is **directly changed** in the PR.');
     } else if (isIndirectlyAffected) {
-      lines.push(`This file is **indirectly affected** by the PR changes.`);
+      lines.push('This file is **indirectly affected** by the PR changes.');
     } else {
-      lines.push(`This file is not affected by the PR changes.`);
+      lines.push('This file is not affected by the PR changes.');
       return lines.join('\n');
     }
 
     lines.push('');
 
     const relevantEdges = graph.edges.filter(
-      (edge) => edge.from === filePath || edge.to === filePath
+      (edge) => edge.from === filePath || edge.to === filePath,
     );
 
     if (relevantEdges.length > 0) {
-      lines.push(`### Dependencies`);
+      lines.push('### Dependencies');
       lines.push('');
       for (const edge of relevantEdges) {
         if (edge.from === filePath) {
@@ -43,7 +43,7 @@ export function formatImpactGraph(graph: ImpactGraph, filePath?: string): string
     return lines.join('\n');
   }
 
-  lines.push(`## Impact Graph`);
+  lines.push('## Impact Graph');
   lines.push('');
 
   lines.push(`### Directly Changed (${graph.directlyChanged.length})`);
@@ -112,6 +112,6 @@ export function registerGetImpactGraphTool(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

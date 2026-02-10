@@ -165,8 +165,8 @@ describe('detectBreakingChanges', () => {
 
   describe('changed signatures', () => {
     it('should detect an added parameter as changed_signature with medium severity', async () => {
-      const baseContent = `export function calc(a: number): number { return a; }`;
-      const headContent = `export function calc(a: number, b: number): number { return a + b; }`;
+      const baseContent = 'export function calc(a: number): number { return a; }';
+      const headContent = 'export function calc(a: number, b: number): number { return a + b; }';
 
       setupGitShow({
         'main:src/math.ts': baseContent,
@@ -185,8 +185,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should detect a removed parameter as changed_signature', async () => {
-      const baseContent = `export function greet(name: string, greeting: string): string { return greeting + name; }`;
-      const headContent = `export function greet(name: string): string { return name; }`;
+      const baseContent = 'export function greet(name: string, greeting: string): string { return greeting + name; }';
+      const headContent = 'export function greet(name: string): string { return name; }';
 
       setupGitShow({
         'main:src/greet.ts': baseContent,
@@ -203,8 +203,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should detect a changed parameter type as changed_signature', async () => {
-      const baseContent = `export function parse(input: string): void {}`;
-      const headContent = `export function parse(input: number): void {}`;
+      const baseContent = 'export function parse(input: string): void {}';
+      const headContent = 'export function parse(input: number): void {}';
 
       setupGitShow({
         'main:src/parse.ts': baseContent,
@@ -221,8 +221,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should detect a changed return type as changed_signature', async () => {
-      const baseContent = `export function getId(): string { return ''; }`;
-      const headContent = `export function getId(): number { return 0; }`;
+      const baseContent = 'export function getId(): string { return \'\'; }';
+      const headContent = 'export function getId(): number { return 0; }';
 
       setupGitShow({
         'main:src/id.ts': baseContent,
@@ -243,8 +243,8 @@ describe('detectBreakingChanges', () => {
 
   describe('changed types', () => {
     it('should detect a kind change (const to variable) as changed_type with medium severity', async () => {
-      const baseContent = `export const config = {};`;
-      const headContent = `export let config = {};`;
+      const baseContent = 'export const config = {};';
+      const headContent = 'export let config = {};';
 
       setupGitShow({
         'main:src/config.ts': baseContent,
@@ -266,8 +266,8 @@ describe('detectBreakingChanges', () => {
   describe('renamed exports', () => {
     it('should detect a renamed function as renamed_export with low severity', async () => {
       // Same signature shape, different name => rename
-      const baseContent = `export function oldName(x: number): number { return x; }`;
-      const headContent = `export function newName(x: number): number { return x; }`;
+      const baseContent = 'export function oldName(x: number): number { return x; }';
+      const headContent = 'export function newName(x: number): number { return x; }';
 
       setupGitShow({
         'main:src/util.ts': baseContent,
@@ -286,8 +286,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should detect a renamed class as renamed_export', async () => {
-      const baseContent = `export class OldClass {}`;
-      const headContent = `export class NewClass {}`;
+      const baseContent = 'export class OldClass {}';
+      const headContent = 'export class NewClass {}';
 
       setupGitShow({
         'main:src/cls.ts': baseContent,
@@ -306,8 +306,8 @@ describe('detectBreakingChanges', () => {
     it('should not match a rename when the kind differs', async () => {
       // Removed a function, added a class with same-ish signature shape.
       // Kind mismatch means it should NOT be detected as a rename.
-      const baseContent = `export function Widget(): void {}`;
-      const headContent = `export class Widget {}`;
+      const baseContent = 'export function Widget(): void {}';
+      const headContent = 'export class Widget {}';
 
       setupGitShow({
         'main:src/widget.ts': baseContent,
@@ -326,8 +326,8 @@ describe('detectBreakingChanges', () => {
 
     it('should not match a rename when signatures differ', async () => {
       // Different name AND different signature => removed_export, not rename
-      const baseContent = `export function oldFunc(a: string): void {}`;
-      const headContent = `export function newFunc(a: number, b: number): number { return 0; }`;
+      const baseContent = 'export function oldFunc(a: string): void {}';
+      const headContent = 'export function newFunc(a: number, b: number): number { return 0; }';
 
       setupGitShow({
         'main:src/func.ts': baseContent,
@@ -349,8 +349,8 @@ describe('detectBreakingChanges', () => {
   describe('renamed files', () => {
     it('should detect renamed files as breaking changes with low severity', async () => {
       setupGitShow({
-        'main:src/utils.ts': `export function helper(x: number): number { return x; }`,
-        'feature:src/new-utils.ts': `export function helper(x: number): number { return x; }`,
+        'main:src/utils.ts': 'export function helper(x: number): number { return x; }',
+        'feature:src/new-utils.ts': 'export function helper(x: number): number { return x; }',
       });
 
       const files = [
@@ -372,8 +372,8 @@ describe('detectBreakingChanges', () => {
 
     it('should detect symbols removed during a file rename as high severity', async () => {
       setupGitShow({
-        'main:src/utils.ts': `export function helper(x: number): number { return x; }\nexport function removed(): void {}`,
-        'feature:src/new-utils.ts': `export function helper(x: number): number { return x; }`,
+        'main:src/utils.ts': 'export function helper(x: number): number { return x; }\nexport function removed(): void {}',
+        'feature:src/new-utils.ts': 'export function helper(x: number): number { return x; }',
       });
 
       const files = [
@@ -397,7 +397,7 @@ describe('detectBreakingChanges', () => {
     it('should skip renamed file if old path base content is unavailable', async () => {
       // Old path doesn't exist at base ref
       setupGitShow({
-        'feature:src/new-name.ts': `export function foo(): void {}`,
+        'feature:src/new-name.ts': 'export function foo(): void {}',
       });
 
       const files = [
@@ -415,7 +415,7 @@ describe('detectBreakingChanges', () => {
     it('should handle renamed file where head content is unavailable', async () => {
       // Old file had exports, but new file can't be read — all exports become removed
       setupGitShow({
-        'main:src/old.ts': `export function foo(): void {}`,
+        'main:src/old.ts': 'export function foo(): void {}',
         // HEAD:src/new.ts is not provided, so getFileAtRef returns null
       });
 
@@ -437,8 +437,8 @@ describe('detectBreakingChanges', () => {
 
     it('should report multiple exports from a renamed file', async () => {
       setupGitShow({
-        'main:src/old-api.ts': `export function alpha(): void {}\nexport function beta(): string { return ''; }\nexport class Gamma {}`,
-        'feature:src/new-api.ts': `export function alpha(): void {}\nexport function beta(): string { return ''; }\nexport class Gamma {}`,
+        'main:src/old-api.ts': 'export function alpha(): void {}\nexport function beta(): string { return \'\'; }\nexport class Gamma {}',
+        'feature:src/new-api.ts': 'export function alpha(): void {}\nexport function beta(): string { return \'\'; }\nexport class Gamma {}',
       });
 
       const files = [
@@ -484,8 +484,8 @@ describe('detectBreakingChanges', () => {
 
     it('should analyze .ts files', async () => {
       setupGitShow({
-        'main:src/index.ts': `export function foo(): void {}`,
-        'feature:src/index.ts': ``,
+        'main:src/index.ts': 'export function foo(): void {}',
+        'feature:src/index.ts': '',
       });
 
       const files = [makeChangedFile({ path: 'src/index.ts' })];
@@ -497,8 +497,8 @@ describe('detectBreakingChanges', () => {
 
     it('should analyze .tsx files', async () => {
       setupGitShow({
-        'main:src/App.tsx': `export function App(): void {}`,
-        'feature:src/App.tsx': ``,
+        'main:src/App.tsx': 'export function App(): void {}',
+        'feature:src/App.tsx': '',
       });
 
       const files = [makeChangedFile({ path: 'src/App.tsx' })];
@@ -510,8 +510,8 @@ describe('detectBreakingChanges', () => {
 
     it('should analyze .js files', async () => {
       setupGitShow({
-        'main:lib/util.js': `export function helper() {}`,
-        'feature:lib/util.js': ``,
+        'main:lib/util.js': 'export function helper() {}',
+        'feature:lib/util.js': '',
       });
 
       const files = [
@@ -525,8 +525,8 @@ describe('detectBreakingChanges', () => {
 
     it('should analyze .jsx files', async () => {
       setupGitShow({
-        'main:src/Button.jsx': `export function Button() {}`,
-        'feature:src/Button.jsx': ``,
+        'main:src/Button.jsx': 'export function Button() {}',
+        'feature:src/Button.jsx': '',
       });
 
       const files = [
@@ -586,7 +586,7 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should handle a deleted file with no exports gracefully', async () => {
-      const baseContent = `const internal = 42;`;
+      const baseContent = 'const internal = 42;';
 
       setupGitShow({
         'main:src/internal.ts': baseContent,
@@ -644,7 +644,7 @@ describe('detectBreakingChanges', () => {
     it('should silently skip modified files when git.show throws for head ref', async () => {
       // Base exists but head throws
       setupGitShow({
-        'main:src/broken.ts': `export function foo(): void {}`,
+        'main:src/broken.ts': 'export function foo(): void {}',
         // head ref not provided, so it will throw
       });
 
@@ -660,26 +660,24 @@ describe('detectBreakingChanges', () => {
       // causes diffExports to throw (unlikely but tests the catch block).
       // We'll simulate this by making git.show return then throw on the second call
       // for a different file, while the first file works fine.
-      const goodBase = `export function working(): void {}`;
-      const goodHead = ``;
+      const goodBase = 'export function working(): void {}';
+      const goodHead = '';
 
       setupGitShow({
         'main:src/good.ts': goodBase,
         'feature:src/good.ts': goodHead,
-        'main:src/bad.ts': `export function oops(): void {}`,
-        'feature:src/bad.ts': `export function oops(): void {}`,
+        'main:src/bad.ts': 'export function oops(): void {}',
+        'feature:src/bad.ts': 'export function oops(): void {}',
       });
 
       // Override show to throw specifically for bad.ts by making it throw
       // an error after returning base content
       const originalImpl = mockShow.getMockImplementation()!;
-      let badCallCount = 0;
       mockShow.mockImplementation(async (args: string[]) => {
         const key = args[0];
         if (key === 'main:src/bad.ts') {
-          badCallCount++;
           // Return base content first time
-          return `export function oops(): void {}`;
+          return 'export function oops(): void {}';
         }
         if (key === 'feature:src/bad.ts') {
           // Throw on head to simulate corruption
@@ -701,10 +699,69 @@ describe('detectBreakingChanges', () => {
       expect(badResults).toHaveLength(0);
     });
 
+    it('should hit the outer catch block and warn when diffExports throws', async () => {
+      // Return non-string content from git.show to cause parseExports/diffExports
+      // to throw (string.replace on a non-string). The getFileAtRef wrapper
+      // only catches errors from git.show itself, not from bad return values.
+      mockShow.mockImplementation(async (args: string[]) => {
+        const key = args[0];
+        if (key === 'main:src/broken.ts') {
+          // Return an object instead of a string to trigger a runtime error
+          // in parseExports when it tries to call .replace() on it
+          return { notAString: true };
+        }
+        if (key === 'feature:src/broken.ts') {
+          return 'export function ok(): void {}';
+        }
+        throw new Error('not found');
+      });
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const files = [makeChangedFile({ path: 'src/broken.ts' })];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      // The file should be skipped due to the error
+      expect(result).toEqual([]);
+      // console.warn should have been called with the skip message
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[pr-impact] Skipping src/broken.ts:'),
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it('should warn with stringified error when error is not an Error instance', async () => {
+      // Make git.show return base content, then have head throw in a way
+      // that bypasses getFileAtRef's catch (which only catches thrown errors)
+      mockShow.mockImplementation(async (args: string[]) => {
+        const key = args[0];
+        if (key === 'main:src/throws.ts') {
+          return 42; // numeric content causes stripComments to throw
+        }
+        if (key === 'feature:src/throws.ts') {
+          return 'export function ok(): void {}';
+        }
+        throw new Error('not found');
+      });
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const files = [makeChangedFile({ path: 'src/throws.ts', status: 'deleted' })];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      expect(result).toEqual([]);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[pr-impact] Skipping src/throws.ts:'),
+      );
+
+      warnSpy.mockRestore();
+    });
+
     it('should handle a mix of analyzable and unanalyzable files', async () => {
       setupGitShow({
-        'main:src/ok.ts': `export function valid(): void {}`,
-        'feature:src/ok.ts': ``,
+        'main:src/ok.ts': 'export function valid(): void {}',
+        'feature:src/ok.ts': '',
         // src/nope.ts doesn't exist at either ref
       });
 
@@ -759,13 +816,13 @@ describe('detectBreakingChanges', () => {
       // readFile returns content for consumer files
       mockReadFile.mockImplementation(async (path: string) => {
         if (path === '/repo/src/consumer-a.ts') {
-          return `import { removed } from './lib';`;
+          return 'import { removed } from \'./lib\';';
         }
         if (path === '/repo/src/consumer-b.ts') {
-          return `import { kept, removed } from './lib';`;
+          return 'import { kept, removed } from \'./lib\';';
         }
         if (path === '/repo/src/unrelated.ts') {
-          return `import { something } from './other';`;
+          return 'import { something } from \'./other\';';
         }
         if (path === '/repo/src/lib.ts') {
           return headContent;
@@ -788,7 +845,7 @@ describe('detectBreakingChanges', () => {
 
     it('should not run consumer detection when there are no breaking changes', async () => {
       // No changes in exports
-      const content = `export function unchanged(): void {}`;
+      const content = 'export function unchanged(): void {}';
       setupGitShow({
         'main:src/stable.ts': content,
         'feature:src/stable.ts': content,
@@ -803,8 +860,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should handle consumers that cannot be read (unreadable files)', async () => {
-      const baseContent = `export function old(): void {}`;
-      const headContent = ``;
+      const baseContent = 'export function old(): void {}';
+      const headContent = '';
 
       setupGitShow({
         'main:src/api.ts': baseContent,
@@ -836,8 +893,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should detect consumers using dynamic import()', async () => {
-      const baseContent = `export function doWork(): void {}`;
-      const headContent = ``;
+      const baseContent = 'export function doWork(): void {}';
+      const headContent = '';
 
       setupGitShow({
         'main:src/worker.ts': baseContent,
@@ -851,7 +908,7 @@ describe('detectBreakingChanges', () => {
 
       mockReadFile.mockImplementation(async (path: string) => {
         if (path === '/repo/src/lazy.ts') {
-          return `const mod = await import('./worker');`;
+          return 'const mod = await import(\'./worker\');';
         }
         if (path === '/repo/src/worker.ts') {
           return headContent;
@@ -867,8 +924,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should detect consumers using require()', async () => {
-      const baseContent = `export function doWork(): void {}`;
-      const headContent = ``;
+      const baseContent = 'export function doWork(): void {}';
+      const headContent = '';
 
       setupGitShow({
         'main:src/worker.js': baseContent,
@@ -882,7 +939,7 @@ describe('detectBreakingChanges', () => {
 
       mockReadFile.mockImplementation(async (path: string) => {
         if (path === '/repo/src/loader.js') {
-          return `const mod = require('./worker');`;
+          return 'const mod = require(\'./worker\');';
         }
         if (path === '/repo/src/worker.js') {
           return headContent;
@@ -900,8 +957,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should resolve imports with extension resolution', async () => {
-      const baseContent = `export function helper(): void {}`;
-      const headContent = ``;
+      const baseContent = 'export function helper(): void {}';
+      const headContent = '';
 
       setupGitShow({
         'main:src/utils.ts': baseContent,
@@ -916,7 +973,7 @@ describe('detectBreakingChanges', () => {
       mockReadFile.mockImplementation(async (path: string) => {
         if (path === '/repo/src/app.ts') {
           // Imports without extension — should resolve to src/utils.ts
-          return `import { helper } from './utils';`;
+          return 'import { helper } from \'./utils\';';
         }
         if (path === '/repo/src/utils.ts') {
           return headContent;
@@ -932,8 +989,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should ignore non-relative imports for consumer detection', async () => {
-      const baseContent = `export function something(): void {}`;
-      const headContent = ``;
+      const baseContent = 'export function something(): void {}';
+      const headContent = '';
 
       setupGitShow({
         'main:src/lib.ts': baseContent,
@@ -948,7 +1005,7 @@ describe('detectBreakingChanges', () => {
       mockReadFile.mockImplementation(async (path: string) => {
         if (path === '/repo/src/app.ts') {
           // Only imports from node_modules, not relative
-          return `import express from 'express';\nimport lodash from 'lodash';`;
+          return 'import express from \'express\';\nimport lodash from \'lodash\';';
         }
         if (path === '/repo/src/lib.ts') {
           return headContent;
@@ -968,7 +1025,7 @@ describe('detectBreakingChanges', () => {
         export function alpha(): void {}
         export function beta(): void {}
       `;
-      const headContent = ``;
+      const headContent = '';
 
       setupGitShow({
         'main:src/api.ts': baseContent,
@@ -982,7 +1039,7 @@ describe('detectBreakingChanges', () => {
 
       mockReadFile.mockImplementation(async (path: string) => {
         if (path === '/repo/src/consumer.ts') {
-          return `import { alpha } from './api';`;
+          return 'import { alpha } from \'./api\';';
         }
         if (path === '/repo/src/api.ts') {
           return headContent;
@@ -1007,8 +1064,8 @@ describe('detectBreakingChanges', () => {
 
   describe('formatSymbolDescription() edge cases', () => {
     it('should include "default" prefix for a default export with a signature', async () => {
-      const baseContent = `export default function handler(req: Request): Response { return new Response(); }`;
-      const headContent = ``;
+      const baseContent = 'export default function handler(req: Request): Response { return new Response(); }';
+      const headContent = '';
 
       setupGitShow({
         'main:src/handler.ts': baseContent,
@@ -1029,8 +1086,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should not include "default" prefix for a non-default export without signature', async () => {
-      const baseContent = `export class Widget {}`;
-      const headContent = ``;
+      const baseContent = 'export class Widget {}';
+      const headContent = '';
 
       setupGitShow({
         'main:src/widget.ts': baseContent,
@@ -1050,8 +1107,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should include signature for a non-default function export', async () => {
-      const baseContent = `export function compute(x: number, y: number): number { return x + y; }`;
-      const headContent = ``;
+      const baseContent = 'export function compute(x: number, y: number): number { return x + y; }';
+      const headContent = '';
 
       setupGitShow({
         'main:src/compute.ts': baseContent,
@@ -1069,8 +1126,8 @@ describe('detectBreakingChanges', () => {
     });
 
     it('should include "default" prefix for a default exported class', async () => {
-      const baseContent = `export default class AppService { start(): void {} }`;
-      const headContent = ``;
+      const baseContent = 'export default class AppService { start(): void {} }';
+      const headContent = '';
 
       setupGitShow({
         'main:src/app-service.ts': baseContent,
@@ -1095,13 +1152,13 @@ describe('detectBreakingChanges', () => {
     it('should handle multiple files with different change types', async () => {
       setupGitShow({
         // File 1: removed export
-        'main:src/a.ts': `export function removed(): void {}`,
-        'feature:src/a.ts': ``,
+        'main:src/a.ts': 'export function removed(): void {}',
+        'feature:src/a.ts': '',
         // File 2: changed signature
-        'main:src/b.ts': `export function changed(x: string): void {}`,
-        'feature:src/b.ts': `export function changed(x: string, y: number): void {}`,
+        'main:src/b.ts': 'export function changed(x: string): void {}',
+        'feature:src/b.ts': 'export function changed(x: string, y: number): void {}',
         // File 3: deleted file
-        'main:src/c.ts': `export class Gone {}`,
+        'main:src/c.ts': 'export class Gone {}',
       });
 
       mockFg.mockResolvedValue([]);

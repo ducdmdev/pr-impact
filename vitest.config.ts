@@ -11,6 +11,7 @@ export default defineConfig({
         '**/*.test.ts',
         '**/*.spec.ts',
         '**/types.ts',
+        'packages/core/src/index.ts',
       ],
       reporter: ['text', 'lcov'],
       reportsDirectory: './coverage',

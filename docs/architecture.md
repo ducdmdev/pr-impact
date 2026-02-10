@@ -58,6 +58,7 @@ graph LR
 
 - `build` depends on `^build` (dependency packages build first).
 - `test` depends on `build` completing.
+- `lint` depends on `^build` (needs built packages for type-checked linting).
 - All packages use **tsup** for bundling (ESM format, sourcemaps). The `core` package also generates TypeScript declarations (`dts: true`).
 
 ---
@@ -90,6 +91,10 @@ graph TD
         SC["staleness-checker.ts<br/>checkDocStaleness()"]
     end
 
+    subgraph "Imports Layer"
+        IR["import-resolver.ts<br/>findConsumers() / resolveImport()"]
+    end
+
     subgraph "Impact Layer"
         IG["impact-graph.ts<br/>buildImpactGraph()"]
     end
@@ -120,6 +125,7 @@ graph TD
     DET --> SD
     ANALYZER --> CC
     CC --> TM
+    DET --> IR
     ANALYZER --> SC
     ANALYZER --> IG
     ANALYZER --> RC
@@ -136,6 +142,7 @@ graph TD
     style CC fill:#059669,color:#fff
     style TM fill:#059669,color:#fff
     style SC fill:#ca8a04,color:#fff
+    style IR fill:#2563eb,color:#fff
     style IG fill:#7c3aed,color:#fff
     style RC fill:#e11d48,color:#fff
     style RF fill:#e11d48,color:#fff

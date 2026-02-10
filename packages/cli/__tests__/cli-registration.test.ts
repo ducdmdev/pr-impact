@@ -16,6 +16,9 @@ vi.mock('../src/commands/risk.js', () => ({
 vi.mock('../src/commands/impact.js', () => ({
   registerImpactCommand: () => { registeredCommands.push('impact'); },
 }));
+vi.mock('../src/commands/comment.js', () => ({
+  registerCommentCommand: () => { registeredCommands.push('comment'); },
+}));
 
 // ── Mock commander to avoid calling parse() ──
 const mockProgram = {
@@ -34,7 +37,7 @@ vi.mock('module', () => ({
 }));
 
 describe('CLI registration', () => {
-  it('registers all four commands and configures the program', async () => {
+  it('registers all five commands and configures the program', async () => {
     // Dynamically import to trigger module-level code
     await import('../src/index.js');
 
@@ -48,7 +51,8 @@ describe('CLI registration', () => {
     expect(registeredCommands).toContain('breaking');
     expect(registeredCommands).toContain('risk');
     expect(registeredCommands).toContain('impact');
-    expect(registeredCommands).toHaveLength(4);
+    expect(registeredCommands).toContain('comment');
+    expect(registeredCommands).toHaveLength(5);
 
     expect(mockProgram.parse).toHaveBeenCalled();
   });

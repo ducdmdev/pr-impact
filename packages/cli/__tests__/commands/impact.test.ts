@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
 import { registerImpactCommand } from '../../src/commands/impact.js';
-import type { ImpactGraph, ChangedFile } from '@pr-impact/core';
+import type { ImpactGraph } from '@pr-impact/core';
 
 // ── Mock @pr-impact/core ──
 const mockParseDiff = vi.fn();
@@ -236,6 +236,33 @@ describe('impact command', () => {
 
     // Should still produce output without crashing
     expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    consoleSpy.mockRestore();
+  });
+
+  it('tree output shows dependents for directly changed files', async () => {
+    mockBuildImpactGraph.mockResolvedValue({
+      directlyChanged: ['src/a.ts', 'src/b.ts'],
+      indirectlyAffected: ['src/c.ts'],
+      edges: [
+        { from: 'src/a.ts', to: 'src/c.ts', type: 'imports' as const },
+        { from: 'src/a.ts', to: 'src/d.ts', type: 'imports' as const },
+      ],
+    });
+
+    const program = createProgram();
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await program.parseAsync(['node', 'pri', 'impact']);
+
+    const output = consoleSpy.mock.calls[0][0] as string;
+    // Should display the tree with dependents under src/a.ts
+    expect(output).toContain('src/a.ts');
+    expect(output).toContain('src/c.ts');
+    expect(output).toContain('src/d.ts');
+    expect(output).toContain('(imports)');
+    // Should show indirectly affected section
+    expect(output).toContain('Indirectly Affected');
 
     consoleSpy.mockRestore();
   });

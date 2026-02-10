@@ -314,4 +314,113 @@ describe('breaking command', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('outputs text format when --format is neither md nor json', async () => {
+    const changes = [makeBreakingChange({
+      severity: 'high',
+      symbolName: 'removedFn',
+      before: 'function removedFn()',
+      after: null,
+      consumers: ['src/app.ts', 'src/main.ts'],
+    })];
+    mockDetectBreakingChanges.mockResolvedValue(changes);
+
+    const program = createProgram();
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+
+    await expect(
+      program.parseAsync(['node', 'pri', 'breaking', 'main', 'HEAD', '--format', 'text']),
+    ).rejects.toThrow('process.exit');
+
+    const output = consoleSpy.mock.calls[0][0] as string;
+    // formatText includes symbol name, severity, file path, before/after, and consumers
+    expect(output).toContain('removedFn');
+    expect(output).toContain('high');
+    expect(output).toContain('src/utils.ts');
+    expect(output).toContain('- function removedFn()');
+    expect(output).toContain('Consumers:');
+    expect(output).toContain('src/app.ts');
+
+    consoleSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('text format includes after line when present', async () => {
+    const changes = [makeBreakingChange({
+      severity: 'medium',
+      symbolName: 'changedFn',
+      type: 'changed_signature',
+      before: 'function changedFn(a: string)',
+      after: 'function changedFn(a: string, b: number)',
+      consumers: [],
+    })];
+    mockDetectBreakingChanges.mockResolvedValue(changes);
+
+    const program = createProgram();
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+
+    await expect(
+      program.parseAsync(['node', 'pri', 'breaking', 'main', 'HEAD', '--format', 'text']),
+    ).rejects.toThrow('process.exit');
+
+    const output = consoleSpy.mock.calls[0][0] as string;
+    expect(output).toContain('+ function changedFn(a: string, b: number)');
+    expect(output).toContain('medium');
+    // No consumers
+    expect(output).not.toContain('Consumers:');
+
+    consoleSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('text format handles singular breaking change count', async () => {
+    const changes = [makeBreakingChange({ severity: 'low' })];
+    mockDetectBreakingChanges.mockResolvedValue(changes);
+
+    const program = createProgram();
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+
+    await expect(
+      program.parseAsync(['node', 'pri', 'breaking', 'main', 'HEAD', '--format', 'text']),
+    ).rejects.toThrow('process.exit');
+
+    const output = consoleSpy.mock.calls[0][0] as string;
+    expect(output).toContain('Found 1 breaking change:');
+    // low severity color
+    expect(output).toContain('low');
+
+    consoleSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('handles error that is not an Error instance', async () => {
+    mockParseDiff.mockRejectedValue('string error');
+
+    const program = createProgram();
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit');
+    });
+
+    await expect(
+      program.parseAsync(['node', 'pri', 'breaking', 'main', 'HEAD']),
+    ).rejects.toThrow('process.exit');
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith('string error');
+    expect(exitSpy).toHaveBeenCalledWith(2);
+
+    consoleSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
 });

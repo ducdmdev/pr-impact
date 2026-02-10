@@ -149,8 +149,8 @@ export function evaluateDocStalenessFactor(
   const details =
     staleness.staleReferences.length > 0
       ? staleness.staleReferences.map(
-          (ref) => `${ref.docFile}:${ref.line} - "${ref.reference}" (${ref.reason})`,
-        )
+        (ref) => `${ref.docFile}:${ref.line} - "${ref.reference}" (${ref.reason})`,
+      )
       : undefined;
 
   const description =

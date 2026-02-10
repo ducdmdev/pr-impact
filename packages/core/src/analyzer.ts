@@ -1,5 +1,5 @@
 import simpleGit from 'simple-git';
-import { PRAnalysis, AnalysisOptions, ChangedFile, BreakingChange, TestCoverageReport, DocStalenessReport, ImpactGraph, RiskAssessment } from './types.js';
+import { PRAnalysis, AnalysisOptions, ChangedFile, BreakingChange, TestCoverageReport, DocStalenessReport, RiskAssessment } from './types.js';
 import { parseDiff } from './diff/diff-parser.js';
 import { detectBreakingChanges } from './breaking/detector.js';
 import { checkTestCoverage } from './coverage/coverage-checker.js';
@@ -107,19 +107,19 @@ export async function analyzePR(options: AnalysisOptions): Promise<PRAnalysis> {
       // Test coverage analysis
       skipCoverage
         ? Promise.resolve<TestCoverageReport>({
-            changedSourceFiles: 0,
-            sourceFilesWithTestChanges: 0,
-            coverageRatio: 0,
-            gaps: [],
-          })
+          changedSourceFiles: 0,
+          sourceFilesWithTestChanges: 0,
+          coverageRatio: 0,
+          gaps: [],
+        })
         : checkTestCoverage(repoPath, changedFiles),
 
       // Documentation staleness checking
       skipDocs
         ? Promise.resolve<DocStalenessReport>({
-            staleReferences: [],
-            checkedFiles: [],
-          })
+          staleReferences: [],
+          checkedFiles: [],
+        })
         : checkDocStaleness(repoPath, changedFiles, baseBranch, headBranch),
 
       // Impact graph building

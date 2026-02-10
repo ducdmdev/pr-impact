@@ -58,7 +58,7 @@ describe('CLI e2e smoke tests', () => {
   }, 10_000);
 
   describe('subcommand --help', () => {
-    const subcommands = ['analyze', 'breaking', 'risk', 'impact'];
+    const subcommands = ['analyze', 'breaking', 'risk', 'impact', 'comment'];
 
     for (const cmd of subcommands) {
       it(`pri ${cmd} --help exits 0 and prints usage`, async () => {
@@ -72,13 +72,14 @@ describe('CLI e2e smoke tests', () => {
   });
 
   describe('subcommand descriptions are present in root help', () => {
-    it('root --help lists all four subcommands', async () => {
+    it('root --help lists all five subcommands', async () => {
       const { stdout } = await runCli(['--help']);
 
       expect(stdout).toContain('analyze');
       expect(stdout).toContain('breaking');
       expect(stdout).toContain('risk');
       expect(stdout).toContain('impact');
+      expect(stdout).toContain('comment');
     }, 10_000);
   });
 

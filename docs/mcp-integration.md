@@ -193,9 +193,73 @@ Add to `.claude/mcp.json` or global settings:
 }
 ```
 
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "pr-impact": {
+      "command": "npx",
+      "args": ["-y", "@pr-impact/mcp-server"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to `.cursor/mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "pr-impact": {
+      "command": "npx",
+      "args": ["-y", "@pr-impact/mcp-server"]
+    }
+  }
+}
+```
+
+### VS Code (Copilot MCP)
+
+Add to `.vscode/mcp.json` in your project root:
+
+```json
+{
+  "servers": {
+    "pr-impact": {
+      "command": "npx",
+      "args": ["-y", "@pr-impact/mcp-server"]
+    }
+  }
+}
+```
+
 ### Any MCP-compatible client
 
 The server communicates over **stdio** (stdin/stdout) using JSON-RPC. Any MCP client that supports stdio transport can connect.
+
+---
+
+## Manual Testing
+
+Use the [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) to test the server locally:
+
+```bash
+# Build the server first
+pnpm build --filter=@pr-impact/mcp-server
+
+# Run the inspector against the built server
+npx @modelcontextprotocol/inspector node ./packages/mcp-server/dist/index.js
+```
+
+The inspector opens a web UI where you can:
+1. See all registered tools and their input schemas
+2. Call tools interactively with custom parameters
+3. Inspect the JSON-RPC request/response payloads
 
 ---
 

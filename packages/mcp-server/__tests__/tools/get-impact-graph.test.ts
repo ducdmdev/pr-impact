@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerGetImpactGraphTool } from '../../src/tools/get-impact-graph.js';
-import type { ImpactGraph, ChangedFile } from '@pr-impact/core';
+import type { ImpactGraph } from '@pr-impact/core';
 
 // ── Mock @pr-impact/core ──
 const mockParseDiff = vi.fn();

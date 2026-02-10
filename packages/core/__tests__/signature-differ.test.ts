@@ -205,6 +205,50 @@ describe('diffSignatures', () => {
     });
   });
 
+  // ── Untyped parameters ──────────────────────────────────────────────────
+
+  describe('untyped parameters', () => {
+    it('should compare untyped params by raw parameter string', () => {
+      // a and b are untyped - extractParamType returns the raw name as the "type"
+      const result = diffSignatures(
+        '(a, b): void',
+        '(a, c): void',
+      );
+      expect(result.changed).toBe(true);
+      // b -> c changed (param at index 1)
+      expect(result.details).toContain("parameter 'b' type changed");
+    });
+
+    it('should report no change for identical untyped params', () => {
+      const result = diffSignatures(
+        '(a, b): void',
+        '(a, b): void',
+      );
+      expect(result.changed).toBe(false);
+    });
+  });
+
+  // ── Generic signature change fallback ──────────────────────────────────
+
+  describe('generic signature change', () => {
+    it('should report generic signature changed when structural comparison finds no specific differences', () => {
+      // These signatures differ textually after normalization but the
+      // structural comparison (param types, return type) finds the same values.
+      // This triggers the "signature changed" fallback at line 210-211.
+      const result = diffSignatures(
+        '(a: string):void',
+        '(a : string): void',
+      );
+      expect(result.changed).toBe(true);
+      expect(result.details).toBe('signature changed');
+    });
+
+    it('should handle malformed signature without opening paren', () => {
+      const result = diffSignatures('noParens', '(a: string): void');
+      expect(result.changed).toBe(true);
+    });
+  });
+
   // ── Return type interface ─────────────────────────────────────────────────
 
   describe('SignatureDiffResult interface', () => {

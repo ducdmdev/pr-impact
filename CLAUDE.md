@@ -12,9 +12,14 @@ This is a **pnpm monorepo** managed with **Turborepo**. The workspace is defined
 pnpm build                                    # Build all packages (via turbo, respects dependency order)
 pnpm test                                     # Run all tests (vitest, workspace mode)
 npx vitest run packages/core/__tests__/FILE.test.ts  # Run a single test file
+pnpm lint                                     # Lint all packages (ESLint flat config)
+pnpm lint:fix                                 # Lint and auto-fix
 pnpm build --filter=@pr-impact/core           # Build only @pr-impact/core
 pnpm build --filter=@pr-impact/cli            # Build only @pr-impact/cli
 pnpm clean                                    # Remove all dist/ directories
+pnpm changeset                                # Create a new changeset for versioning
+pnpm version-packages                         # Apply changesets and bump versions
+pnpm release                                  # Build all packages and publish to npm
 ```
 
 ## Architecture
@@ -47,6 +52,8 @@ src/
     test-mapper.ts          — Map source files to their expected test files
   docs/
     staleness-checker.ts    — Find stale references in doc files
+  imports/
+    import-resolver.ts      — Resolve import paths and find consumers of changed files
   impact/
     impact-graph.ts         — Build import dependency graph from changed files
   risk/
@@ -62,8 +69,13 @@ src/
 Commander-based CLI binary (`pri`). Commands live in `src/commands/`:
 - `analyze.ts` — full analysis
 - `breaking.ts` — breaking changes only
+- `comment.ts` — post analysis report as PR comment (upsert via HTML markers)
 - `impact.ts` — impact graph only
 - `risk.ts` — risk score only
+
+GitHub integration helpers live in `src/github/`:
+- `ci-env.ts` — auto-detect PR number and repo from CI environment variables
+- `comment-poster.ts` — create/update PR comments via GitHub API (native fetch)
 
 Dependencies: commander, chalk, ora.
 
@@ -83,8 +95,10 @@ Dependencies: @modelcontextprotocol/sdk, zod.
 - **TypeScript strict mode** — `tsconfig.base.json` sets `"strict": true`, target ES2022, module ES2022 with bundler resolution.
 - **All shared types** are defined in `packages/core/src/types.ts`. Import types from there.
 - **Barrel exports** — the public API of `@pr-impact/core` is defined in `packages/core/src/index.ts`. Any new public function or type must be re-exported from this file.
+- **Linting** — ESLint flat config (`eslint.config.mjs`) with `typescript-eslint` (type-checked), `@stylistic/eslint-plugin` (formatting), and `eslint-plugin-vitest` (test files). No Prettier needed.
 - **tsup** is used for bundling all packages. Config: ESM format, dts generation, sourcemaps, clean output.
-- **Turbo** task graph: `build` depends on `^build` (dependency packages build first); `test` depends on `build`.
+- **Turbo** task graph: `build` depends on `^build` (dependency packages build first); `test` depends on `build`; `lint` depends on `^build`.
+- **Changesets** — `@changesets/cli` manages versioning and changelogs. All three packages use fixed versioning (same version number). Release workflow in `.github/workflows/release.yml` auto-creates "Version Packages" PRs and publishes to npm on merge to `main`.
 
 ## Key patterns
 
@@ -111,7 +125,7 @@ Detailed documentation lives in `docs/`:
 | [`docs/data-flow.md`](docs/data-flow.md) | Type relationships (ER diagram), data flow through the pipeline, internal types, module-to-type mapping |
 | [`docs/risk-scoring.md`](docs/risk-scoring.md) | Risk formula, 6 factor weights and scoring logic, score-to-level mapping, worked example |
 | [`docs/ci-integration.md`](docs/ci-integration.md) | Exit code behavior, GitHub Actions example, recommended thresholds, output formats, posting reports as PR comments |
-| [`docs/mcp-integration.md`](docs/mcp-integration.md) | MCP server architecture, 4 available tools with parameters, tool registration pattern, client configuration |
+| [`docs/mcp-integration.md`](docs/mcp-integration.md) | MCP server architecture, 4 available tools with parameters, tool registration pattern, client configuration (Claude Code, Claude Desktop, Cursor, VS Code), manual testing with MCP Inspector |
 
 ## Testing guidelines
 
@@ -121,9 +135,17 @@ Detailed documentation lives in `docs/`:
 - Write **unit tests only** — do not write integration tests that require a real git repository.
 - **Mock git operations** (simple-git calls) where needed; tests should not depend on filesystem or git state.
 - Existing test files:
+  - `analyzer.test.ts`
+  - `coverage-checker.test.ts`
+  - `detector.test.ts`
+  - `diff-parser.test.ts`
   - `export-differ.test.ts`
   - `file-categorizer.test.ts`
+  - `impact-graph.test.ts`
+  - `import-resolver.test.ts`
   - `json-reporter.test.ts`
   - `markdown-reporter.test.ts`
   - `risk-calculator.test.ts`
   - `signature-differ.test.ts`
+  - `staleness-checker.test.ts`
+  - `test-mapper.test.ts`

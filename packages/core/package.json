@@ -1,6 +1,7 @@
 {
   "name": "@pr-impact/core",
   "version": "0.1.0",
+  "description": "PR analysis engine — breaking changes, test coverage, doc staleness, impact graphs, and risk scoring",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -12,6 +13,28 @@
     }
   },
   "files": ["dist"],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "pr-impact",
+    "pull-request",
+    "breaking-changes",
+    "risk-score",
+    "code-analysis",
+    "static-analysis",
+    "impact-graph",
+    "test-coverage"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pr-impact/pr-impact.git",
+    "directory": "packages/core"
+  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",

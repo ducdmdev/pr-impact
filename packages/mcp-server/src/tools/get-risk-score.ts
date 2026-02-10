@@ -17,14 +17,14 @@ function formatRiskFactor(factor: RiskFactor): string {
 
 function formatRiskAssessment(risk: RiskAssessment): string {
   const lines: string[] = [];
-  lines.push(`## Risk Assessment`);
+  lines.push('## Risk Assessment');
   lines.push('');
   lines.push(`**Overall Score:** ${risk.score}/100`);
   lines.push(`**Risk Level:** ${risk.level.toUpperCase()}`);
   lines.push('');
 
   if (risk.factors.length > 0) {
-    lines.push(`### Contributing Factors`);
+    lines.push('### Contributing Factors');
     lines.push('');
     for (const factor of risk.factors) {
       lines.push(formatRiskFactor(factor));
@@ -66,6 +66,6 @@ export function registerGetRiskScoreTool(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

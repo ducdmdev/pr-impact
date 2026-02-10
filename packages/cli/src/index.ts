@@ -4,6 +4,7 @@ import { registerAnalyzeCommand } from './commands/analyze.js';
 import { registerBreakingCommand } from './commands/breaking.js';
 import { registerRiskCommand } from './commands/risk.js';
 import { registerImpactCommand } from './commands/impact.js';
+import { registerCommentCommand } from './commands/comment.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -18,5 +19,6 @@ registerAnalyzeCommand(program);
 registerBreakingCommand(program);
 registerRiskCommand(program);
 registerImpactCommand(program);
+registerCommentCommand(program);
 
 program.parse();

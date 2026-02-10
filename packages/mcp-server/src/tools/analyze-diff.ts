@@ -28,6 +28,6 @@ export function registerAnalyzeDiffTool(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

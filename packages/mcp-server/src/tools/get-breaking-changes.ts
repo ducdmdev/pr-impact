@@ -17,7 +17,7 @@ export function formatBreakingChange(bc: BreakingChange): string {
   if (bc.after !== null) {
     lines.push(`  After: \`${bc.after}\``);
   } else {
-    lines.push(`  After: (removed)`);
+    lines.push('  After: (removed)');
   }
   if (bc.consumers.length > 0) {
     lines.push(`  Consumers: ${bc.consumers.map((c) => `\`${c}\``).join(', ')}`);
@@ -49,7 +49,7 @@ export function registerGetBreakingChangesTool(server: McpServer): void {
 
         const minLevel = SEVERITY_ORDER[minSeverity || 'low'] ?? 0;
         const filtered = breakingChanges.filter(
-          (bc) => (SEVERITY_ORDER[bc.severity] ?? 0) >= minLevel
+          (bc) => (SEVERITY_ORDER[bc.severity] ?? 0) >= minLevel,
         );
 
         if (filtered.length === 0) {
@@ -79,6 +79,6 @@ export function registerGetBreakingChangesTool(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

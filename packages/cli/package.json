@@ -1,11 +1,32 @@
 {
   "name": "@pr-impact/cli",
   "version": "0.1.0",
+  "description": "CLI for pr-impact — analyze PRs for breaking changes, risk, and impact",
   "type": "module",
   "bin": {
     "pri": "./dist/index.js"
   },
   "files": ["dist"],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "pr-impact",
+    "cli",
+    "pull-request",
+    "breaking-changes",
+    "risk-score",
+    "code-analysis"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pr-impact/pr-impact.git",
+    "directory": "packages/cli"
+  },
   "scripts": {
     "build": "tsup",
     "clean": "rm -rf dist"

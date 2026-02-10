@@ -74,6 +74,12 @@ jobs:
       - name: Full analysis report
         if: always()
         run: pri analyze origin/main HEAD --format md
+
+      - name: Post report as PR comment
+        if: always()
+        run: pri comment origin/main HEAD
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
@@ -137,6 +143,33 @@ pri risk --threshold 26
 
 ### Posting Reports as PR Comments
 
+The recommended approach is to use the built-in `pri comment` command, which handles analysis and GitHub comment posting in a single step:
+
+```yaml
+      - name: Post PR impact report
+        run: pri comment origin/main HEAD
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+`pri comment` will:
+1. Run the full analysis
+2. Find an existing pr-impact comment on the PR (if any) using hidden HTML markers
+3. Create a new comment or update the existing one (upsert behavior)
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--pr <number>` | PR number | Auto-detected from CI env |
+| `--github-repo <owner/repo>` | GitHub repository | Auto-detected from CI env |
+| `--token <token>` | GitHub API token | `GITHUB_TOKEN` env var |
+| `--repo <path>` | Local repository path | Current directory |
+
+**Supported CI environments for auto-detection:** GitHub Actions, GitLab CI, CircleCI.
+
+**Alternative:** If you need more control over the report format, generate it separately and use a third-party action:
+
 ```yaml
       - name: Generate report
         run: pri analyze origin/main HEAD --format md --output report.md
@@ -153,5 +186,5 @@ pri risk --threshold 26
 
 - **Fetch depth** -- always use `fetch-depth: 0` (full clone) so `git diff` can access the base branch history.
 - **Branch references** -- in CI, use `origin/main` as the base (not just `main`) since the local branch may not exist.
-- **Exit codes** -- Exit 0 = success/gate passed. Exit 1 = quality gate failed (`pri breaking`, `pri risk` only). Exit 2 = internal error (all commands). `pri analyze` and `pri impact` never exit 1 since they don't act as quality gates.
+- **Exit codes** -- Exit 0 = success/gate passed. Exit 1 = quality gate failed (`pri breaking`, `pri risk` only). Exit 2 = internal error (all commands). `pri analyze`, `pri impact`, and `pri comment` never exit 1 since they don't act as quality gates.
 - **`pri impact` differences** -- unlike other commands, `pri impact` takes an optional `[file]` positional argument (not `[base] [head]`), plus `--depth <n>` (default 3) and `--format <text|json|dot>`. It auto-detects `main`/`master` internally.

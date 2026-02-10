@@ -187,6 +187,7 @@ erDiagram
 | `detector.ts` | `ChangedFile[]`, git refs | `BreakingChange[]` |
 | `export-differ.ts` | file content strings | `FileExports` (via `parseExports`), `{ removed, added, modified }` (via `diffExports`) |
 | `signature-differ.ts` | signature strings | `{ changed, details }` |
+| `import-resolver.ts` | `repoPath`, target file paths | `Map<string, string[]>` (consumers map) |
 | `coverage-checker.ts` | `ChangedFile[]` | `TestCoverageReport` |
 | `test-mapper.ts` | source file path | expected test file paths |
 | `staleness-checker.ts` | `ChangedFile[]`, git refs | `DocStalenessReport` |

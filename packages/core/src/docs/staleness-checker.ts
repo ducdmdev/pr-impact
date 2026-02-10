@@ -209,19 +209,22 @@ async function collectRemovedSymbols(
  * Regex-based extraction of exported symbol names from TypeScript/JavaScript
  * source code.  Matches patterns like:
  *   export function foo(
- *   export async function bar(
+ *   export async function* bar(
  *   export class Baz
+ *   export abstract class Baz
+ *   export declare class Baz
  *   export const qux
  *   export let quux
  *   export var quuz
  *   export type Foo
  *   export interface Bar
  *   export enum Status
+ *   export const enum Direction
  *   export default function foo(
  *   export default class Bar
  */
 const EXPORT_REGEX =
-  /export\s+(?:default\s+)?(?:async\s+)?(?:function\s*\*?\s*|class\s+|const\s+|let\s+|var\s+|type\s+|interface\s+|enum\s+)([A-Za-z_$][A-Za-z0-9_$]*)/g;
+  /export\s+(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:abstract\s+)?(?:function\s*\*?\s*|class\s+|const\s+enum\s+|const\s+|let\s+|var\s+|type\s+|interface\s+|enum\s+)([A-Za-z_$][A-Za-z0-9_$]*)/g;
 
 function extractExportedSymbolNames(content: string): string[] {
   const names: string[] = [];

@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { parseDiff, buildImpactGraph, resolveDefaultBaseBranch } from '@pr-impact/core';
-import type { ImpactGraph, ImpactEdge, ChangedFile } from '@pr-impact/core';
+import type { ImpactGraph, ChangedFile } from '@pr-impact/core';
 import { resolve } from 'path';
 
 function formatTreeOutput(graph: ImpactGraph): string {

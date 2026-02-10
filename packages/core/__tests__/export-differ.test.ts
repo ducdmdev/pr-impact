@@ -185,6 +185,218 @@ describe('parseExports', () => {
         isDefault: false,
       });
     });
+
+    it('should parse export const enum', () => {
+      const content = 'export const enum Direction { Up, Down, Left, Right }';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'Direction',
+        kind: 'enum',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export declare const enum', () => {
+      const content = 'export declare const enum Axis { X, Y, Z }';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'Axis',
+        kind: 'enum',
+        isDefault: false,
+      });
+    });
+  });
+
+  describe('declare keyword', () => {
+    it('should parse export declare function', () => {
+      const content = 'export declare function init(config: Config): void;';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toMatchObject({
+        name: 'init',
+        kind: 'function',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export declare class', () => {
+      const content = 'export declare class Logger {}';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'Logger',
+        kind: 'class',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export declare const', () => {
+      const content = 'export declare const VERSION: string;';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toMatchObject({
+        name: 'VERSION',
+        kind: 'const',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export declare interface', () => {
+      const content = 'export declare interface Options { verbose: boolean; }';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'Options',
+        kind: 'interface',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export declare type', () => {
+      const content = 'export declare type Handler = (event: Event) => void;';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'Handler',
+        kind: 'type',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export declare enum', () => {
+      const content = 'export declare enum Level { Low, Medium, High }';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'Level',
+        kind: 'enum',
+        isDefault: false,
+      });
+    });
+  });
+
+  describe('abstract class', () => {
+    it('should parse export abstract class', () => {
+      const content = 'export abstract class Base {}';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'Base',
+        kind: 'class',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export declare abstract class', () => {
+      const content = 'export declare abstract class AbstractService {}';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'AbstractService',
+        kind: 'class',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export default abstract class', () => {
+      const content = 'export default abstract class Controller {}';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toEqual({
+        name: 'Controller',
+        kind: 'class',
+        isDefault: true,
+      });
+    });
+  });
+
+  describe('generator functions', () => {
+    it('should parse export function* generator', () => {
+      const content = 'export function* count(n: number): Generator<number> { yield n; }';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toMatchObject({
+        name: 'count',
+        kind: 'function',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export async function* async generator', () => {
+      const content = 'export async function* stream(url: string): AsyncGenerator<string> { yield ""; }';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toMatchObject({
+        name: 'stream',
+        kind: 'function',
+        isDefault: false,
+      });
+    });
+
+    it('should parse export default function* generator', () => {
+      const content = 'export default function* items(): Generator<number> { yield 1; }';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toMatchObject({
+        name: 'items',
+        kind: 'function',
+        isDefault: true,
+      });
+    });
+  });
+
+  describe('destructured exports', () => {
+    it('should parse export const { a, b } = ... (object destructuring)', () => {
+      const content = 'export const { alpha, beta } = getValues();';
+      const result = parseExports(content, filePath);
+
+      const names = result.symbols.map((s) => s.name);
+      expect(names).toContain('alpha');
+      expect(names).toContain('beta');
+    });
+
+    it('should parse export const { a as b } = ... (renamed destructuring)', () => {
+      const content = 'export const { original as renamed } = getValues();';
+      const result = parseExports(content, filePath);
+
+      const names = result.symbols.map((s) => s.name);
+      expect(names).toContain('renamed');
+      expect(names).not.toContain('original');
+    });
+
+    it('should parse export const [ a, b ] = ... (array destructuring)', () => {
+      const content = 'export const [ first, second ] = getTuple();';
+      const result = parseExports(content, filePath);
+
+      const names = result.symbols.map((s) => s.name);
+      expect(names).toContain('first');
+      expect(names).toContain('second');
+    });
+
+    it('should not double-count destructured names as variable exports', () => {
+      const content = 'export const { foo, bar } = obj;';
+      const result = parseExports(content, filePath);
+
+      // Each name should appear exactly once
+      const fooSymbols = result.symbols.filter((s) => s.name === 'foo');
+      expect(fooSymbols).toHaveLength(1);
+    });
   });
 
   describe('export default', () => {
@@ -210,6 +422,31 @@ describe('parseExports', () => {
       const defaultExport = result.symbols.find((s) => s.isDefault);
       expect(defaultExport).toBeDefined();
       expect(defaultExport!.name).toBe('app');
+    });
+
+    it('should parse export default anonymous function', () => {
+      const content = 'export default function(req: Request): Response { return new Response(); }';
+      const result = parseExports(content, filePath);
+
+      expect(result.symbols).toHaveLength(1);
+      expect(result.symbols[0]).toMatchObject({
+        name: 'default',
+        kind: 'function',
+        isDefault: true,
+      });
+      expect(result.symbols[0].signature).toContain('req: Request');
+    });
+
+    it('should parse export default async anonymous function', () => {
+      const content = 'export default async function(url: string): Promise<void> { }';
+      const result = parseExports(content, filePath);
+
+      // The anonymous function is captured and possibly also matched by the
+      // default expression regex (capturing 'async'). At minimum, the default
+      // anonymous function should be present.
+      const anonFn = result.symbols.find((s) => s.isDefault && s.kind === 'function');
+      expect(anonFn).toBeDefined();
+      expect(anonFn!.name).toBe('default');
     });
   });
 

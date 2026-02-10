@@ -9,43 +9,54 @@ import { ExportedSymbol, FileExports } from '../types.js';
  *  - Optionally the signature (parameter list + return type for functions)
  */
 
-// export async? function NAME(...)
+// export [declare] async? function[*] NAME(...)
 const EXPORT_FUNCTION_RE =
-  /export\s+(?:async\s+)?function\s+(\w+)\s*(\([^)]*\)(?:\s*:\s*[^{;]+)?)/g;
+  /export\s+(?:declare\s+)?(?:async\s+)?function\s*\*?\s*(\w+)\s*(\([^)]*\)(?:\s*:\s*[^{;]+)?)/g;
 
-// export default async? function NAME(...)
+// export default [declare] async? function[*] NAME(...)
 const EXPORT_DEFAULT_FUNCTION_RE =
-  /export\s+default\s+(?:async\s+)?function\s+(\w+)\s*(\([^)]*\)(?:\s*:\s*[^{;]+)?)/g;
+  /export\s+default\s+(?:declare\s+)?(?:async\s+)?function\s*\*?\s*(\w+)\s*(\([^)]*\)(?:\s*:\s*[^{;]+)?)/g;
 
-// export default async? function(...)  — unnamed default
+// export default [declare] async? function[*](...)  — unnamed default
 const EXPORT_DEFAULT_ANON_FUNCTION_RE =
-  /export\s+default\s+(?:async\s+)?function\s*(\([^)]*\)(?:\s*:\s*[^{;]+)?)/g;
+  /export\s+default\s+(?:declare\s+)?(?:async\s+)?function\s*\*?\s*(\([^)]*\)(?:\s*:\s*[^{;]+)?)/g;
 
-// export class NAME
-const EXPORT_CLASS_RE = /export\s+class\s+(\w+)/g;
+// export [declare] [abstract] class NAME
+const EXPORT_CLASS_RE = /export\s+(?:declare\s+)?(?:abstract\s+)?class\s+(\w+)/g;
 
-// export default class NAME
-const EXPORT_DEFAULT_CLASS_RE = /export\s+default\s+class\s+(\w+)/g;
+// export default [declare] [abstract] class NAME
+const EXPORT_DEFAULT_CLASS_RE = /export\s+default\s+(?:declare\s+)?(?:abstract\s+)?class\s+(\w+)/g;
 
-// export const NAME / export let NAME / export var NAME
+// export [declare] const enum NAME (must be checked before variable regex)
+const EXPORT_CONST_ENUM_RE = /export\s+(?:declare\s+)?const\s+enum\s+(\w+)/g;
+
+// export [declare] const NAME / export let NAME / export var NAME
 // Also handles: export const NAME: Type = ...
 const EXPORT_VARIABLE_RE =
-  /export\s+(const|let|var)\s+(\w+)\s*(?::\s*([^=;]+?))?(?:\s*=|;)/g;
+  /export\s+(?:declare\s+)?(const|let|var)\s+(\w+)\s*(?::\s*([^=;]+?))?(?:\s*=|;)/g;
 
-// export interface NAME
-const EXPORT_INTERFACE_RE = /export\s+interface\s+(\w+)/g;
+// export [declare] const { a, b } = ... (destructured object)
+const EXPORT_DESTRUCTURED_OBJ_RE =
+  /export\s+(?:declare\s+)?(?:const|let|var)\s+\{([^}]+)\}/g;
 
-// export type NAME
-const EXPORT_TYPE_RE = /export\s+type\s+(\w+)/g;
+// export [declare] const [ a, b ] = ... (destructured array)
+const EXPORT_DESTRUCTURED_ARR_RE =
+  /export\s+(?:declare\s+)?(?:const|let|var)\s+\[([^\]]+)\]/g;
 
-// export enum NAME
-const EXPORT_ENUM_RE = /export\s+enum\s+(\w+)/g;
+// export [declare] interface NAME
+const EXPORT_INTERFACE_RE = /export\s+(?:declare\s+)?interface\s+(\w+)/g;
+
+// export [declare] type NAME
+const EXPORT_TYPE_RE = /export\s+(?:declare\s+)?type\s+(\w+)/g;
+
+// export [declare] enum NAME
+const EXPORT_ENUM_RE = /export\s+(?:declare\s+)?enum\s+(\w+)/g;
 
 // export { a, b, c } or export { a as b, c as default }
 const EXPORT_NAMED_RE = /export\s*\{([^}]+)\}/g;
 
 // export default <expression> (catch-all for default exports not matched above)
-const EXPORT_DEFAULT_EXPR_RE = /export\s+default\s+(?!function|class|interface|type|enum)(\w+)/g;
+const EXPORT_DEFAULT_EXPR_RE = /export\s+default\s+(?!function|class|interface|type|enum|abstract|async|declare)(\w+)/g;
 
 /**
  * Strip single-line and multi-line comments from source code to avoid
@@ -164,13 +175,77 @@ export function parseExports(content: string, filePath: string): FileExports {
     }
   }
 
-  // 6. export const/let/var NAME
+  // 6a. export const enum NAME (before variable regex to avoid false matches)
+  const constEnumNames = new Set<string>();
+  {
+    const re = new RegExp(EXPORT_CONST_ENUM_RE.source, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(stripped)) !== null) {
+      constEnumNames.add(m[1]);
+      addSymbol({
+        name: m[1],
+        kind: 'enum',
+        isDefault: false,
+      });
+    }
+  }
+
+  // 6b. export const { a, b } = ... (destructured object)
+  const destructuredNames = new Set<string>();
+  {
+    const re = new RegExp(EXPORT_DESTRUCTURED_OBJ_RE.source, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(stripped)) !== null) {
+      const items = m[1].split(',');
+      for (const item of items) {
+        // Handle "original as renamed" pattern
+        const asMatch = item.trim().match(/^(\w+)\s+as\s+(\w+)$/);
+        const name = asMatch ? asMatch[2] : item.trim().match(/^(\w+)/)?.[1];
+        if (name) {
+          destructuredNames.add(name);
+          addSymbol({
+            name,
+            kind: 'const',
+            isDefault: false,
+          });
+        }
+      }
+    }
+  }
+
+  // 6c. export const [ a, b ] = ... (destructured array)
+  {
+    const re = new RegExp(EXPORT_DESTRUCTURED_ARR_RE.source, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(stripped)) !== null) {
+      const items = m[1].split(',');
+      for (const item of items) {
+        const name = item.trim().match(/^(\w+)/)?.[1];
+        if (name) {
+          destructuredNames.add(name);
+          addSymbol({
+            name,
+            kind: 'const',
+            isDefault: false,
+          });
+        }
+      }
+    }
+  }
+
+  // 6d. export const/let/var NAME
   {
     const re = new RegExp(EXPORT_VARIABLE_RE.source, 'g');
     let m: RegExpExecArray | null;
     while ((m = re.exec(stripped)) !== null) {
       const varKeyword = m[1]; // const, let, var
       const name = m[2];
+
+      // Skip if this was already captured as a const enum or destructured binding
+      if (constEnumNames.has(name) || destructuredNames.has(name)) continue;
+      // Skip "export const enum Foo" — the "enum" would be captured as a variable name
+      if (name === 'enum') continue;
+
       const typeAnnotation = m[3] ? normalizeSignature(m[3]) : undefined;
 
       addSymbol({

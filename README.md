@@ -24,6 +24,7 @@
   - [Factor Breakdown](#factor-breakdown)
   - [Risk Levels](#risk-levels)
 - [Architecture](#architecture)
+- [Documentation](#documentation)
 - [Development](#development)
 - [License](#license)
 
@@ -463,6 +464,19 @@ Both `cli` and `mcp-server` depend on `core` via `workspace:*` links. The `core`
 | `cli` | `ora` | Spinner for long-running operations |
 | `mcp-server` | `@modelcontextprotocol/sdk` | MCP protocol server implementation |
 | `mcp-server` | `zod` | Input schema validation for MCP tools |
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/architecture.md) | Monorepo layout, package dependency graph, build pipeline, core module organization |
+| [Analysis Pipeline](docs/analysis-pipeline.md) | The 6-step `analyzePR()` pipeline, sequence diagram, skip behavior, entry points |
+| [Data Flow](docs/data-flow.md) | Type relationships (ER diagram), data flow through the pipeline, module-to-type mapping |
+| [Risk Scoring](docs/risk-scoring.md) | Risk formula, 6 factor weights and scoring logic, worked example |
+| [CI Integration](docs/ci-integration.md) | Exit codes, GitHub Actions examples, recommended thresholds, output formats |
+| [MCP Integration](docs/mcp-integration.md) | MCP server tools, registration pattern, client configuration |
 
 ---
 

@@ -100,6 +100,19 @@ Dependencies: @modelcontextprotocol/sdk, zod.
   - Impact breadth — weight 0.10
 - **Parallel analysis** — `analyzePR()` runs breaking-change detection, test coverage, doc staleness, and impact graph building concurrently via `Promise.all`.
 
+## Documentation
+
+Detailed documentation lives in `docs/`:
+
+| Document | Description |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | Monorepo layout, package dependency graph, build pipeline, core module organization, external dependencies, design principles |
+| [`docs/analysis-pipeline.md`](docs/analysis-pipeline.md) | The 6-step `analyzePR()` pipeline, sequence diagram, skip behavior, entry points (CLI / MCP / programmatic) |
+| [`docs/data-flow.md`](docs/data-flow.md) | Type relationships (ER diagram), data flow through the pipeline, internal types, module-to-type mapping |
+| [`docs/risk-scoring.md`](docs/risk-scoring.md) | Risk formula, 6 factor weights and scoring logic, score-to-level mapping, worked example |
+| [`docs/ci-integration.md`](docs/ci-integration.md) | Exit code behavior, GitHub Actions example, recommended thresholds, output formats, posting reports as PR comments |
+| [`docs/mcp-integration.md`](docs/mcp-integration.md) | MCP server architecture, 4 available tools with parameters, tool registration pattern, client configuration |
+
 ## Testing guidelines
 
 - Tests use **vitest** and live in `packages/core/__tests__/`.

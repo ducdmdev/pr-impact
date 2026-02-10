@@ -53,6 +53,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build (required for cross-package type resolution)
+        run: pnpm build
+
       - name: Type check core
         run: pnpm exec tsc --noEmit -p packages/core/tsconfig.json
 

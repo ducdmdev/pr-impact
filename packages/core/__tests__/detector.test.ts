@@ -1001,6 +1001,94 @@ describe('detectBreakingChanges', () => {
     });
   });
 
+  // ── formatSymbolDescription() edge cases ──────────────────────────────
+  // formatSymbolDescription() is a private helper; we test it indirectly by
+  // examining the `before` and `after` fields of detected breaking changes.
+
+  describe('formatSymbolDescription() edge cases', () => {
+    it('should include "default" prefix for a default export with a signature', async () => {
+      const baseContent = `export default function handler(req: Request): Response { return new Response(); }`;
+      const headContent = ``;
+
+      setupGitShow({
+        'main:src/handler.ts': baseContent,
+        'feature:src/handler.ts': headContent,
+      });
+
+      const files = [makeChangedFile({ path: 'src/handler.ts' })];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('removed_export');
+      expect(result[0].symbolName).toBe('handler');
+      // formatSymbolDescription should produce "default function handler (req: Request): Response"
+      // The "before" field should contain "default" because isDefault is true
+      expect(result[0].before).toMatch(/^default /);
+      // It should also contain the signature
+      expect(result[0].before).toContain('handler');
+    });
+
+    it('should not include "default" prefix for a non-default export without signature', async () => {
+      const baseContent = `export class Widget {}`;
+      const headContent = ``;
+
+      setupGitShow({
+        'main:src/widget.ts': baseContent,
+        'feature:src/widget.ts': headContent,
+      });
+
+      const files = [makeChangedFile({ path: 'src/widget.ts' })];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('removed_export');
+      expect(result[0].symbolName).toBe('Widget');
+      // For a non-default export, "before" should start with the kind, not "default"
+      expect(result[0].before).not.toMatch(/^default /);
+      // Should be something like "class Widget"
+      expect(result[0].before).toMatch(/^class Widget/);
+    });
+
+    it('should include signature for a non-default function export', async () => {
+      const baseContent = `export function compute(x: number, y: number): number { return x + y; }`;
+      const headContent = ``;
+
+      setupGitShow({
+        'main:src/compute.ts': baseContent,
+        'feature:src/compute.ts': headContent,
+      });
+
+      const files = [makeChangedFile({ path: 'src/compute.ts' })];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      expect(result).toHaveLength(1);
+      // before should be "function compute <signature>" — no "default" prefix
+      expect(result[0].before).not.toMatch(/^default /);
+      expect(result[0].before).toContain('function');
+      expect(result[0].before).toContain('compute');
+    });
+
+    it('should include "default" prefix for a default exported class', async () => {
+      const baseContent = `export default class AppService { start(): void {} }`;
+      const headContent = ``;
+
+      setupGitShow({
+        'main:src/app-service.ts': baseContent,
+        'feature:src/app-service.ts': headContent,
+      });
+
+      const files = [makeChangedFile({ path: 'src/app-service.ts' })];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].symbolName).toBe('AppService');
+      // Should have "default" prefix
+      expect(result[0].before).toMatch(/^default /);
+      expect(result[0].before).toContain('class');
+      expect(result[0].before).toContain('AppService');
+    });
+  });
+
   // ── Combined scenarios ────────────────────────────────────────────────
 
   describe('combined scenarios', () => {

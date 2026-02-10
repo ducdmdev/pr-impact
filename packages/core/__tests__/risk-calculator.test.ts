@@ -301,6 +301,20 @@ describe('evaluateDocStalenessFactor', () => {
     expect(factor.details![0]).toContain('README.md:42');
     expect(factor.details![0]).toContain('oldFunc');
   });
+
+  it('should return score exactly 100 with exactly 5 stale references', () => {
+    const refs = Array.from({ length: 5 }, (_, i) => ({
+      docFile: `docs/doc${i}.md`,
+      line: i + 1,
+      reference: `sym${i}`,
+      reason: 'symbol removed',
+    }));
+    const factor = evaluateDocStalenessFactor(
+      makeDocStaleness({ staleReferences: refs }),
+    );
+    // 5 * 20 = 100, which is exactly the cap
+    expect(factor.score).toBe(100);
+  });
 });
 
 describe('evaluateConfigChangesFactor', () => {
@@ -387,6 +401,62 @@ describe('evaluateConfigChangesFactor', () => {
     const factor = evaluateConfigChangesFactor(files);
     expect(factor.details).toEqual(['.github/workflows/ci.yml']);
   });
+
+  it('should return score 100 for webpack.config changes', () => {
+    const files = [
+      makeChangedFile({
+        path: 'webpack.config.js',
+        category: 'config',
+      }),
+    ];
+    const factor = evaluateConfigChangesFactor(files);
+    expect(factor.score).toBe(100);
+    expect(factor.description).toContain('CI/build configuration changed');
+  });
+
+  it('should return score 100 for rollup.config changes', () => {
+    const files = [
+      makeChangedFile({
+        path: 'rollup.config.mjs',
+        category: 'config',
+      }),
+    ];
+    const factor = evaluateConfigChangesFactor(files);
+    expect(factor.score).toBe(100);
+  });
+
+  it('should return score 100 for .gitlab-ci.yml changes', () => {
+    const files = [
+      makeChangedFile({
+        path: '.gitlab-ci.yml',
+        category: 'config',
+      }),
+    ];
+    const factor = evaluateConfigChangesFactor(files);
+    expect(factor.score).toBe(100);
+  });
+
+  it('should return score 100 for Jenkinsfile changes', () => {
+    const files = [
+      makeChangedFile({
+        path: 'Jenkinsfile',
+        category: 'config',
+      }),
+    ];
+    const factor = evaluateConfigChangesFactor(files);
+    expect(factor.score).toBe(100);
+  });
+
+  it('should return score 100 for Jenkinsfile (case-insensitive) changes', () => {
+    const files = [
+      makeChangedFile({
+        path: 'jenkinsfile',
+        category: 'config',
+      }),
+    ];
+    const factor = evaluateConfigChangesFactor(files);
+    expect(factor.score).toBe(100);
+  });
 });
 
 describe('evaluateImpactBreadthFactor', () => {
@@ -425,6 +495,31 @@ describe('evaluateImpactBreadthFactor', () => {
   it('should not include details when no files are affected', () => {
     const factor = evaluateImpactBreadthFactor(makeImpactGraph());
     expect(factor.details).toBeUndefined();
+  });
+
+  it('should return score exactly 100 with exactly 10 indirectly affected files', () => {
+    const affected = Array.from({ length: 10 }, (_, i) => `file${i}.ts`);
+    const factor = evaluateImpactBreadthFactor(
+      makeImpactGraph({ indirectlyAffected: affected }),
+    );
+    // 10 * 10 = 100, which is exactly the cap
+    expect(factor.score).toBe(100);
+  });
+
+  it('should slice details to max 20 items when there are 21 affected files', () => {
+    const affected = Array.from({ length: 21 }, (_, i) => `module${i}.ts`);
+    const factor = evaluateImpactBreadthFactor(
+      makeImpactGraph({ indirectlyAffected: affected }),
+    );
+    // Score is capped at 100 (21 * 10 = 210, min(210, 100) = 100)
+    expect(factor.score).toBe(100);
+    // Details should be sliced to the first 20
+    expect(factor.details).toBeDefined();
+    expect(factor.details!.length).toBe(20);
+    // Verify the 21st element is not included
+    expect(factor.details).not.toContain('module20.ts');
+    // Verify the 20th element (index 19) is included
+    expect(factor.details).toContain('module19.ts');
   });
 });
 

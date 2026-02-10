@@ -1,12 +1,14 @@
 {
   "name": "@pr-impact/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI for pr-impact — analyze PRs for breaking changes, risk, and impact",
   "type": "module",
   "bin": {
     "pri": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
   "publishConfig": {
     "access": "public"

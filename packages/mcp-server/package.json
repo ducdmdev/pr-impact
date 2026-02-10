@@ -1,6 +1,6 @@
 {
   "name": "@pr-impact/mcp-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server exposing pr-impact analysis tools to AI assistants",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,7 +12,9 @@
   "bin": {
     "pr-impact-mcp": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
   "keywords": [
     "mcp",

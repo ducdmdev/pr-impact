@@ -6,7 +6,6 @@
     "build": "turbo build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "turbo lint",
     "clean": "turbo clean"
   },
   "devDependencies": {

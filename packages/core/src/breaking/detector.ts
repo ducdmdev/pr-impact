@@ -1,145 +1,11 @@
-import fg from 'fast-glob';
-import { readFile } from 'fs/promises';
-import { resolve, relative, dirname } from 'path';
 import simpleGit from 'simple-git';
 import { BreakingChange, ChangedFile } from '../types.js';
 import { diffExports, parseExports } from './export-differ.js';
 import { diffSignatures } from './signature-differ.js';
+import { findConsumers } from '../imports/import-resolver.js';
 
 /** File extensions that we analyze for breaking changes. */
 const ANALYZABLE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
-
-// ── Import extraction (same patterns as impact-graph.ts) ──
-
-const STATIC_IMPORT_RE = /(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g;
-const DYNAMIC_IMPORT_RE = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-const REQUIRE_RE = /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-
-const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
-const INDEX_FILES = ['index.ts', 'index.tsx', 'index.js', 'index.jsx'];
-
-/**
- * Extract all import paths from a file's content.
- */
-function extractImportPaths(content: string): string[] {
-  const paths: string[] = [];
-
-  for (const re of [STATIC_IMPORT_RE, DYNAMIC_IMPORT_RE, REQUIRE_RE]) {
-    const pattern = new RegExp(re.source, re.flags);
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(content)) !== null) {
-      paths.push(match[1]);
-    }
-  }
-
-  return paths;
-}
-
-/**
- * Check if an import path is relative (starts with . or ..).
- */
-function isRelativeImport(importPath: string): boolean {
-  return importPath.startsWith('./') || importPath.startsWith('../');
-}
-
-/**
- * Resolve a relative import to a repo-relative path by trying various
- * extensions and index file patterns.
- */
-function resolveImport(
-  importPath: string,
-  importerRepoRelPath: string,
-  allFiles: Set<string>,
-): string | null {
-  const importerDir = dirname(importerRepoRelPath);
-  const resolved = resolve('/', importerDir, importPath).slice(1);
-
-  const normalized = resolved.startsWith('/') ? resolved.slice(1) : resolved;
-
-  // 1. Exact match
-  if (allFiles.has(normalized)) {
-    return normalized;
-  }
-
-  // 2. Try appending each extension
-  for (const ext of RESOLVE_EXTENSIONS) {
-    const candidate = normalized + ext;
-    if (allFiles.has(candidate)) {
-      return candidate;
-    }
-  }
-
-  // 3. Try as directory with index file
-  for (const indexFile of INDEX_FILES) {
-    const candidate = normalized + '/' + indexFile;
-    if (allFiles.has(candidate)) {
-      return candidate;
-    }
-  }
-
-  return null;
-}
-
-/**
- * Find all source files that import from the given set of file paths.
- *
- * Returns a map: target file path -> list of consumer file paths that import it.
- */
-async function findConsumers(
-  repoPath: string,
-  targetFiles: Set<string>,
-): Promise<Map<string, string[]>> {
-  const consumers = new Map<string, string[]>();
-  for (const target of targetFiles) {
-    consumers.set(target, []);
-  }
-
-  // Discover all source files in the repo
-  const absolutePaths = await fg('**/*.{ts,tsx,js,jsx}', {
-    cwd: repoPath,
-    ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**'],
-    absolute: true,
-  });
-
-  const repoRelativePaths = absolutePaths.map((abs) => relative(repoPath, abs));
-  const allFilesSet = new Set(repoRelativePaths);
-
-  // Scan files in batches to avoid EMFILE
-  const BATCH_SIZE = 50;
-  for (let i = 0; i < repoRelativePaths.length; i += BATCH_SIZE) {
-    const batch = repoRelativePaths.slice(i, i + BATCH_SIZE);
-    await Promise.all(
-      batch.map(async (relPath) => {
-        const absPath = resolve(repoPath, relPath);
-        let content: string;
-        try {
-          content = await readFile(absPath, 'utf-8');
-        } catch {
-          return; // skip unreadable files
-        }
-
-        const importPaths = extractImportPaths(content);
-
-        for (const importPath of importPaths) {
-          if (!isRelativeImport(importPath)) {
-            continue;
-          }
-
-          const resolved = resolveImport(importPath, relPath, allFilesSet);
-          if (resolved === null) {
-            continue;
-          }
-
-          if (targetFiles.has(resolved)) {
-            consumers.get(resolved)!.push(relPath);
-          }
-        }
-      }),
-    );
-  }
-
-  return consumers;
-}
 
 /**
  * Get the file extension (lowercased) from a file path.
@@ -186,17 +52,63 @@ export async function detectBreakingChanges(
   const git = simpleGit(repoPath);
   const breakingChanges: BreakingChange[] = [];
 
-  // Only analyze source files that were modified or deleted
+  // Only analyze source files that were modified, deleted, or renamed
   const filesToAnalyze = changedFiles.filter((f) => {
     const ext = getExtension(f.path);
     return (
       ANALYZABLE_EXTENSIONS.has(ext) &&
-      (f.status === 'modified' || f.status === 'deleted')
+      (f.status === 'modified' || f.status === 'deleted' || f.status === 'renamed')
     );
   });
 
   for (const file of filesToAnalyze) {
     try {
+      if (file.status === 'renamed' && file.oldPath) {
+        // For renamed files, the old path's consumers will break
+        const oldBaseContent = await getFileAtRef(git, baseBranch, file.oldPath);
+        if (oldBaseContent === null) {
+          continue;
+        }
+
+        const oldExports = parseExports(oldBaseContent, file.oldPath);
+        const headContent = await getFileAtRef(git, headBranch, file.path);
+        const newExports = headContent ? parseExports(headContent, file.path) : { filePath: file.path, symbols: [] };
+
+        // Every export from the old path is effectively removed from that path
+        for (const sym of oldExports.symbols) {
+          // Check if the symbol still exists in the new file with the same signature
+          const stillExists = newExports.symbols.some(
+            (s) => s.name === sym.name && s.kind === sym.kind,
+          );
+
+          if (stillExists) {
+            // Symbol exists in new location — it's a path rename, low severity
+            breakingChanges.push({
+              filePath: file.oldPath,
+              type: 'renamed_export',
+              symbolName: sym.name,
+              before: `${formatSymbolDescription(sym)} (at ${file.oldPath})`,
+              after: `${formatSymbolDescription(sym)} (at ${file.path})`,
+              severity: 'low',
+              consumers: [],
+            });
+          } else {
+            // Symbol was removed during the rename — high severity
+            breakingChanges.push({
+              filePath: file.oldPath,
+              type: 'removed_export',
+              symbolName: sym.name,
+              before: formatSymbolDescription(sym),
+              after: null,
+              severity: 'high',
+              consumers: [],
+            });
+          }
+        }
+
+        continue;
+      }
+
       const baseContent = await getFileAtRef(git, baseBranch, file.path);
 
       // If we can't get the base content, we can't detect breaking changes
@@ -314,8 +226,10 @@ export async function detectBreakingChanges(
         }
       }
     } catch (error) {
-      // If we can't analyze a file (e.g. binary, encoding issues), skip it.
-      // In a production tool we'd log this; for now we silently continue.
+      // If we can't analyze a file (e.g. binary, encoding issues), skip it
+      // but warn on stderr so failures aren't completely silent.
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`[pr-impact] Skipping ${file.path}: ${msg}`);
       continue;
     }
   }

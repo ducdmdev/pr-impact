@@ -15,8 +15,8 @@ export type {
   FileExports,
 } from './types.js';
 
-export { analyzePR } from './analyzer.js';
-export { parseDiff } from './diff/diff-parser.js';
+export { analyzePR, resolveDefaultBaseBranch } from './analyzer.js';
+export { parseDiff, detectLanguage } from './diff/diff-parser.js';
 export { categorizeFile } from './diff/file-categorizer.js';
 export { detectBreakingChanges } from './breaking/detector.js';
 export { diffExports, parseExports } from './breaking/export-differ.js';
@@ -28,3 +28,4 @@ export { buildImpactGraph } from './impact/impact-graph.js';
 export { calculateRisk } from './risk/risk-calculator.js';
 export { formatMarkdown } from './output/markdown-reporter.js';
 export { formatJSON } from './output/json-reporter.js';
+export { extractImportPaths, isRelativeImport, resolveImport, findConsumers } from './imports/import-resolver.js';

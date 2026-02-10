@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
-import { parseDiff, buildImpactGraph } from '@pr-impact/core';
+import { parseDiff, buildImpactGraph, resolveDefaultBaseBranch } from '@pr-impact/core';
 import type { ImpactGraph, ImpactEdge, ChangedFile } from '@pr-impact/core';
 import { resolve } from 'path';
 
@@ -56,7 +56,7 @@ function formatTreeOutput(graph: ImpactGraph): string {
   return lines.join('\n');
 }
 
-function formatDotOutput(graph: ImpactGraph): string {
+export function formatDotOutput(graph: ImpactGraph): string {
   const lines: string[] = [];
   lines.push('digraph impact {');
   lines.push('  rankdir=LR;');
@@ -117,10 +117,9 @@ export function registerImpactCommand(program: Command): void {
             },
           ];
         } else {
-          // Default: parse diff between main/master and HEAD
-          changedFiles = await parseDiff(repoPath, 'main', 'HEAD').catch(
-            () => parseDiff(repoPath, 'master', 'HEAD'),
-          );
+          // Default: parse diff between detected default branch and HEAD
+          const baseBranch = await resolveDefaultBaseBranch(repoPath);
+          changedFiles = await parseDiff(repoPath, baseBranch, 'HEAD');
         }
 
         const graph = await buildImpactGraph(repoPath, changedFiles, depth);
@@ -143,7 +142,7 @@ export function registerImpactCommand(program: Command): void {
         console.error(
           chalk.red(err instanceof Error ? err.message : String(err)),
         );
-        process.exit(1);
+        process.exit(2);
       }
     });
 }

@@ -2,6 +2,13 @@ import simpleGit from 'simple-git';
 import { ChangedFile } from '../types.js';
 import { categorizeFile } from './file-categorizer.js';
 
+/** Extended diff result that includes categorized file arrays present at runtime. */
+interface DiffResultWithCategories {
+  created?: string[];
+  deleted?: string[];
+  renamed?: string[];
+}
+
 const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
   '.ts': 'typescript',
   '.tsx': 'typescript',
@@ -48,7 +55,7 @@ const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
   '.rst': 'restructuredtext',
 };
 
-function detectLanguage(filePath: string): string {
+export function detectLanguage(filePath: string): string {
   const fileName = filePath.split('/').pop() ?? '';
   const lowerName = fileName.toLowerCase();
 
@@ -108,9 +115,10 @@ export async function parseDiff(
 
   // Build lookup sets from the categorized arrays in the diff summary.
   // simple-git provides .created, .deleted, .renamed as arrays of file paths.
-  const createdFiles: string[] = (diffSummary as any).created ?? [];
-  const deletedFiles: string[] = (diffSummary as any).deleted ?? [];
-  const renamedFiles: string[] = (diffSummary as any).renamed ?? [];
+  const { created, deleted, renamed } = diffSummary as typeof diffSummary & DiffResultWithCategories;
+  const createdFiles: string[] = created ?? [];
+  const deletedFiles: string[] = deleted ?? [];
+  const renamedFiles: string[] = renamed ?? [];
 
   const changedFiles: ChangedFile[] = [];
 

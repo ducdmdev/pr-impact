@@ -11,7 +11,7 @@ import { calculateRisk } from './risk/risk-calculator.js';
  * Resolve the default base branch for the repository by checking whether
  * 'main' or 'master' exists in the local branch list.
  */
-async function resolveDefaultBaseBranch(repoPath: string): Promise<string> {
+export async function resolveDefaultBaseBranch(repoPath: string): Promise<string> {
   const git = simpleGit(repoPath);
   const branchSummary = await git.branch();
 

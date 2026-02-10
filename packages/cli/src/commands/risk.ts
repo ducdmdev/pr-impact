@@ -101,7 +101,7 @@ export function registerRiskCommand(program: Command): void {
         console.error(
           chalk.red(err instanceof Error ? err.message : String(err)),
         );
-        process.exit(1);
+        process.exit(2);
       }
     });
 }

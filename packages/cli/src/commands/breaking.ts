@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
-import { parseDiff, detectBreakingChanges } from '@pr-impact/core';
+import { parseDiff, detectBreakingChanges, resolveDefaultBaseBranch } from '@pr-impact/core';
 import type { BreakingChange } from '@pr-impact/core';
 import { resolve } from 'path';
 
@@ -22,7 +22,7 @@ function severityColor(severity: BreakingChange['severity']): string {
   }
 }
 
-function formatMarkdownTable(changes: BreakingChange[]): string {
+export function formatMarkdownTable(changes: BreakingChange[]): string {
   const lines: string[] = [];
   lines.push('# Breaking Changes\n');
   lines.push(`Found **${changes.length}** breaking change${changes.length === 1 ? '' : 's'}.\n`);
@@ -76,7 +76,7 @@ export function registerBreakingCommand(program: Command): void {
       const spinner = ora({ text: 'Detecting breaking changes...', stream: process.stderr }).start();
       try {
         const repoPath = resolve(opts.repo);
-        const baseBranch = base ?? 'main';
+        const baseBranch = base ?? await resolveDefaultBaseBranch(repoPath);
         const headBranch = head ?? 'HEAD';
 
         const changedFiles = await parseDiff(repoPath, baseBranch, headBranch);
@@ -120,7 +120,7 @@ export function registerBreakingCommand(program: Command): void {
         console.error(
           chalk.red(err instanceof Error ? err.message : String(err)),
         );
-        process.exit(1);
+        process.exit(2);
       }
     });
 }

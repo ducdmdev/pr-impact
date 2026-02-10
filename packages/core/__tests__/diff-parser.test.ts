@@ -8,7 +8,7 @@ vi.mock('simple-git', () => ({
   }),
 }));
 
-import { parseDiff } from '../src/diff/diff-parser.js';
+import { parseDiff, detectLanguage } from '../src/diff/diff-parser.js';
 
 beforeEach(() => {
   mockDiffSummary.mockReset();
@@ -561,5 +561,46 @@ describe('parseDiff', () => {
       expect(result).toHaveLength(1);
       expect(result[0].status).toBe('modified');
     });
+  });
+});
+
+// ── detectLanguage (direct unit tests) ────────────────────────────────────────
+
+describe('detectLanguage', () => {
+  it('detects TypeScript files', () => {
+    expect(detectLanguage('src/index.ts')).toBe('typescript');
+    expect(detectLanguage('components/App.tsx')).toBe('typescript');
+  });
+
+  it('detects JavaScript files', () => {
+    expect(detectLanguage('src/utils.js')).toBe('javascript');
+    expect(detectLanguage('lib/component.jsx')).toBe('javascript');
+    expect(detectLanguage('config.mjs')).toBe('javascript');
+    expect(detectLanguage('config.cjs')).toBe('javascript');
+  });
+
+  it('detects other languages', () => {
+    expect(detectLanguage('main.py')).toBe('python');
+    expect(detectLanguage('main.go')).toBe('go');
+    expect(detectLanguage('main.rs')).toBe('rust');
+    expect(detectLanguage('Main.java')).toBe('java');
+  });
+
+  it('detects special filenames', () => {
+    expect(detectLanguage('Dockerfile')).toBe('dockerfile');
+    expect(detectLanguage('path/to/Dockerfile')).toBe('dockerfile');
+    expect(detectLanguage('Makefile')).toBe('makefile');
+  });
+
+  it('detects config file formats', () => {
+    expect(detectLanguage('config.json')).toBe('json');
+    expect(detectLanguage('config.yaml')).toBe('yaml');
+    expect(detectLanguage('config.yml')).toBe('yaml');
+    expect(detectLanguage('config.toml')).toBe('toml');
+  });
+
+  it('returns unknown for unrecognized extensions', () => {
+    expect(detectLanguage('file.xyz')).toBe('unknown');
+    expect(detectLanguage('binary')).toBe('unknown');
   });
 });

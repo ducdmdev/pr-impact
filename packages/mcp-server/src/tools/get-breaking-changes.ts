@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { parseDiff, detectBreakingChanges } from '@pr-impact/core';
+import { parseDiff, detectBreakingChanges, resolveDefaultBaseBranch } from '@pr-impact/core';
 import type { BreakingChange } from '@pr-impact/core';
 
 const SEVERITY_ORDER: Record<string, number> = {
@@ -9,7 +9,7 @@ const SEVERITY_ORDER: Record<string, number> = {
   high: 2,
 };
 
-function formatBreakingChange(bc: BreakingChange): string {
+export function formatBreakingChange(bc: BreakingChange): string {
   const lines: string[] = [];
   lines.push(`- **${bc.symbolName}** in \`${bc.filePath}\``);
   lines.push(`  Type: ${bc.type} | Severity: ${bc.severity}`);
@@ -41,7 +41,7 @@ export function registerGetBreakingChangesTool(server: McpServer): void {
     async ({ repoPath, baseBranch, headBranch, minSeverity }) => {
       try {
         const repo = repoPath || process.cwd();
-        const base = baseBranch || 'main';
+        const base = baseBranch || await resolveDefaultBaseBranch(repo);
         const head = headBranch || 'HEAD';
 
         const changedFiles = await parseDiff(repo, base, head);

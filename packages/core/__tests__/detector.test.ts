@@ -344,6 +344,126 @@ describe('detectBreakingChanges', () => {
     });
   });
 
+  // ── 4b. Renamed files (file path changes) ─────────────────────────────
+
+  describe('renamed files', () => {
+    it('should detect renamed files as breaking changes with low severity', async () => {
+      setupGitShow({
+        'main:src/utils.ts': `export function helper(x: number): number { return x; }`,
+        'feature:src/new-utils.ts': `export function helper(x: number): number { return x; }`,
+      });
+
+      const files = [
+        makeChangedFile({
+          path: 'src/new-utils.ts',
+          oldPath: 'src/utils.ts',
+          status: 'renamed',
+        }),
+      ];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      expect(result.length).toBeGreaterThan(0);
+      const renameChange = result.find((bc) => bc.type === 'renamed_export');
+      expect(renameChange).toBeDefined();
+      expect(renameChange!.symbolName).toBe('helper');
+      expect(renameChange!.severity).toBe('low');
+      expect(renameChange!.filePath).toBe('src/utils.ts');
+    });
+
+    it('should detect symbols removed during a file rename as high severity', async () => {
+      setupGitShow({
+        'main:src/utils.ts': `export function helper(x: number): number { return x; }\nexport function removed(): void {}`,
+        'feature:src/new-utils.ts': `export function helper(x: number): number { return x; }`,
+      });
+
+      const files = [
+        makeChangedFile({
+          path: 'src/new-utils.ts',
+          oldPath: 'src/utils.ts',
+          status: 'renamed',
+          additions: 5,
+          deletions: 5,
+        }),
+      ];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      const removedChange = result.find(
+        (bc) => bc.type === 'removed_export' && bc.symbolName === 'removed',
+      );
+      expect(removedChange).toBeDefined();
+      expect(removedChange!.severity).toBe('high');
+    });
+
+    it('should skip renamed file if old path base content is unavailable', async () => {
+      // Old path doesn't exist at base ref
+      setupGitShow({
+        'feature:src/new-name.ts': `export function foo(): void {}`,
+      });
+
+      const files = [
+        makeChangedFile({
+          path: 'src/new-name.ts',
+          oldPath: 'src/old-name.ts',
+          status: 'renamed',
+        }),
+      ];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle renamed file where head content is unavailable', async () => {
+      // Old file had exports, but new file can't be read — all exports become removed
+      setupGitShow({
+        'main:src/old.ts': `export function foo(): void {}`,
+        // HEAD:src/new.ts is not provided, so getFileAtRef returns null
+      });
+
+      const files = [
+        makeChangedFile({
+          path: 'src/new.ts',
+          oldPath: 'src/old.ts',
+          status: 'renamed',
+        }),
+      ];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      // Since head content is null, newExports has no symbols, so all old exports are removed
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('removed_export');
+      expect(result[0].symbolName).toBe('foo');
+      expect(result[0].severity).toBe('high');
+    });
+
+    it('should report multiple exports from a renamed file', async () => {
+      setupGitShow({
+        'main:src/old-api.ts': `export function alpha(): void {}\nexport function beta(): string { return ''; }\nexport class Gamma {}`,
+        'feature:src/new-api.ts': `export function alpha(): void {}\nexport function beta(): string { return ''; }\nexport class Gamma {}`,
+      });
+
+      const files = [
+        makeChangedFile({
+          path: 'src/new-api.ts',
+          oldPath: 'src/old-api.ts',
+          status: 'renamed',
+        }),
+      ];
+      const result = await detectBreakingChanges(repoPath, base, head, files);
+
+      // All three symbols should be flagged as renamed_export
+      const renames = result.filter((bc) => bc.type === 'renamed_export');
+      expect(renames).toHaveLength(3);
+      const names = renames.map((bc) => bc.symbolName);
+      expect(names).toContain('alpha');
+      expect(names).toContain('beta');
+      expect(names).toContain('Gamma');
+      for (const bc of renames) {
+        expect(bc.severity).toBe('low');
+        expect(bc.filePath).toBe('src/old-api.ts');
+      }
+    });
+  });
+
   // ── 5. File filtering ─────────────────────────────────────────────────
 
   describe('file filtering', () => {
@@ -418,24 +538,9 @@ describe('detectBreakingChanges', () => {
       expect(result[0].symbolName).toBe('Button');
     });
 
-    it('should skip added files (only modified and deleted are analyzed)', async () => {
+    it('should skip added files (only modified, deleted, and renamed are analyzed)', async () => {
       const files = [
         makeChangedFile({ path: 'src/new-file.ts', status: 'added' }),
-      ];
-
-      const result = await detectBreakingChanges(repoPath, base, head, files);
-
-      expect(result).toEqual([]);
-      expect(mockShow).not.toHaveBeenCalled();
-    });
-
-    it('should skip renamed files', async () => {
-      const files = [
-        makeChangedFile({
-          path: 'src/new-name.ts',
-          status: 'renamed',
-          oldPath: 'src/old-name.ts',
-        }),
       ];
 
       const result = await detectBreakingChanges(repoPath, base, head, files);

@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { parseDiff, buildImpactGraph } from '@pr-impact/core';
+import { parseDiff, buildImpactGraph, resolveDefaultBaseBranch } from '@pr-impact/core';
 import type { ImpactGraph } from '@pr-impact/core';
 
-function formatImpactGraph(graph: ImpactGraph, filePath?: string): string {
+export function formatImpactGraph(graph: ImpactGraph, filePath?: string): string {
   const lines: string[] = [];
 
   if (filePath) {
@@ -93,7 +93,7 @@ export function registerGetImpactGraphTool(server: McpServer): void {
     async ({ repoPath, baseBranch, headBranch, filePath, depth }) => {
       try {
         const repo = repoPath || process.cwd();
-        const base = baseBranch || 'main';
+        const base = baseBranch || await resolveDefaultBaseBranch(repo);
         const head = headBranch || 'HEAD';
 
         const changedFiles = await parseDiff(repo, base, head);

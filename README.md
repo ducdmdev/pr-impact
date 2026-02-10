@@ -469,14 +469,25 @@ Both `cli` and `mcp-server` depend on `core` via `workspace:*` links. The `core`
 
 ## Documentation
 
+### Adoption Guides
+
+| Document | Description |
+|----------|-------------|
+| [Getting Started](docs/getting-started.md) | Installation, first run, understanding the output |
+| [CI Integration](docs/ci-integration.md) | GitHub Actions, GitLab CI, CircleCI, Jenkins examples, exit codes, thresholds |
+| [MCP Integration](docs/mcp-integration.md) | MCP server tools, registration pattern, client configuration |
+| [Programmatic API](docs/programmatic-api.md) | Using `@pr-impact/core` as a library, individual analysis steps, error handling |
+| [Configuration Guide](docs/configuration-guide.md) | Threshold tuning, skipping checks, monorepo considerations, output formats |
+| [Troubleshooting](docs/troubleshooting.md) | Shallow clones, missing branches, false positives, CI issues |
+
+### Internal Architecture
+
 | Document | Description |
 |----------|-------------|
 | [Architecture](docs/architecture.md) | Monorepo layout, package dependency graph, build pipeline, core module organization |
 | [Analysis Pipeline](docs/analysis-pipeline.md) | The 6-step `analyzePR()` pipeline, sequence diagram, skip behavior, entry points |
 | [Data Flow](docs/data-flow.md) | Type relationships (ER diagram), data flow through the pipeline, module-to-type mapping |
 | [Risk Scoring](docs/risk-scoring.md) | Risk formula, 6 factor weights and scoring logic, worked example |
-| [CI Integration](docs/ci-integration.md) | Exit codes, GitHub Actions examples, recommended thresholds, output formats |
-| [MCP Integration](docs/mcp-integration.md) | MCP server tools, registration pattern, client configuration |
 
 ---
 

@@ -84,6 +84,111 @@ jobs:
 
 ---
 
+## GitLab CI Example
+
+```yaml
+# .gitlab-ci.yml
+pr-impact:
+  image: node:20
+  stage: test
+  variables:
+    GIT_DEPTH: 0  # Full clone
+  before_script:
+    - npm install -g @pr-impact/cli
+  script:
+    - pri breaking origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME HEAD --severity medium
+    - pri risk origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME HEAD --threshold 60
+    - pri analyze origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME HEAD --format md
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+```
+
+To post a comment on the merge request:
+
+```yaml
+    - pri comment origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME HEAD
+      --pr $CI_MERGE_REQUEST_IID
+      --github-repo $CI_PROJECT_PATH
+```
+
+> **Note:** `pri comment` uses the GitHub API. For GitLab merge requests, generate the report and use GitLab's API or a GitLab-specific commenting tool instead.
+
+---
+
+## CircleCI Example
+
+```yaml
+# .circleci/config.yml
+version: 2.1
+
+jobs:
+  pr-impact:
+    docker:
+      - image: cimg/node:20.0
+    steps:
+      - checkout  # CircleCI does a full clone by default
+      - run:
+          name: Install pr-impact
+          command: npm install -g @pr-impact/cli
+      - run:
+          name: Check breaking changes
+          command: pri breaking origin/main HEAD --severity medium
+      - run:
+          name: Check risk score
+          command: pri risk origin/main HEAD --threshold 60
+      - run:
+          name: Full analysis
+          command: pri analyze origin/main HEAD --format md
+          when: always
+
+workflows:
+  pr-check:
+    jobs:
+      - pr-impact:
+          filters:
+            branches:
+              ignore: main
+```
+
+---
+
+## Jenkins Example
+
+```groovy
+// Jenkinsfile
+pipeline {
+    agent { docker { image 'node:20' } }
+
+    stages {
+        stage('Install') {
+            steps {
+                sh 'npm install -g @pr-impact/cli'
+            }
+        }
+        stage('Breaking Changes') {
+            steps {
+                sh 'pri breaking origin/main HEAD --severity medium'
+            }
+        }
+        stage('Risk Score') {
+            steps {
+                sh 'pri risk origin/main HEAD --threshold 60'
+            }
+        }
+        stage('Full Report') {
+            steps {
+                sh 'pri analyze origin/main HEAD --format json --output report.json'
+                archiveArtifacts artifacts: 'report.json'
+            }
+        }
+    }
+}
+```
+
+> **Note:** Ensure Jenkins clones with full history. In pipeline SCM settings, set "Advanced clone behaviors" and uncheck "Shallow clone".
+
+---
+
 ## CI Workflow Diagram
 
 ```mermaid

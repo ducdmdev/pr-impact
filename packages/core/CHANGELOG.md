@@ -1,5 +1,11 @@
 # @pr-impact/core
 
+## 0.2.1
+
+### Patch Changes
+
+- 047e429: Add consumer-facing adoption guides: getting-started, programmatic API, configuration guide, troubleshooting, and CONTRIBUTING.md. Expand CI integration docs with GitLab CI, CircleCI, and Jenkins examples.
+
 ## 0.2.0
 
 ### Minor Changes

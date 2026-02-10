@@ -1,6 +1,6 @@
 {
   "name": "@pr-impact/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PR analysis engine — breaking changes, test coverage, doc staleness, impact graphs, and risk scoring",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@pr-impact/mcp-server",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server exposing pr-impact analysis tools to AI assistants",
   "type": "module",
   "main": "./dist/index.js",

@@ -3,7 +3,7 @@
 **Static analysis for pull requests -- detect breaking changes, map blast radius, and score risk before you merge.**
 
 <!-- Badges -->
-[![Build](https://img.shields.io/github/actions/workflow/status/ducdm/pr-impact/ci.yml?branch=main)](https://github.com/ducdm/pr-impact/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/ducdm/pr-impact/ci.yml?branch=main)](https://github.com/ducdmdev/pr-impact/actions)
 [![npm](https://img.shields.io/npm/v/@pr-impact/core)](https://www.npmjs.com/package/@pr-impact/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -491,7 +491,7 @@ Both `cli` and `mcp-server` depend on `core` via `workspace:*` links. The `core`
 
 ```bash
 # Clone the repository
-git clone https://github.com/ducdm/pr-impact.git
+git clone https://github.com/ducdmdev/pr-impact.git
 cd pr-impact
 
 # Install dependencies

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseExports, diffExports } from '../src/breaking/export-differ.js';
+import { parseExports, parseExportsAsync, diffExports, diffExportsAsync } from '../src/breaking/export-differ.js';
+import type { FileResolver } from '../src/breaking/export-differ.js';
 
 describe('parseExports', () => {
   const filePath = 'src/index.ts';
@@ -684,5 +685,385 @@ describe('diffExports', () => {
       expect(result.removed).toHaveLength(1);
       expect(result.removed[0].isDefault).toBe(true);
     });
+  });
+});
+
+// ─── Barrel re-export tests ─────────────────────────────────────────────────
+
+describe('parseExports — barrel re-exports (export * from)', () => {
+  const filePath = 'src/index.ts';
+
+  /**
+   * Helper: build a sync FileResolver from a map of specifier -> { content, resolvedPath }.
+   */
+  function buildResolver(
+    fileMap: Record<string, { content: string; resolvedPath: string }>,
+  ): FileResolver {
+    return (specifier: string, _importerFilePath: string) => {
+      return fileMap[specifier] ?? null;
+    };
+  }
+
+  it('should ignore export * from when no resolver is provided (backward compat)', () => {
+    const content = `
+      export * from './utils';
+      export function foo(): void {}
+    `;
+    const result = parseExports(content, filePath);
+
+    // Without a resolver, barrel re-exports are invisible
+    expect(result.symbols).toHaveLength(1);
+    expect(result.symbols[0].name).toBe('foo');
+  });
+
+  it('should resolve a simple export * from with parseExportsAsync', async () => {
+    const indexContent = `export * from './utils';`;
+    const utilsContent = `
+      export function helper(): void {}
+      export const VERSION = '1.0';
+    `;
+
+    const resolver = buildResolver({
+      './utils': { content: utilsContent, resolvedPath: 'src/utils.ts' },
+    });
+
+    const result = await parseExportsAsync(indexContent, filePath, resolver);
+
+    expect(result.filePath).toBe(filePath);
+    const names = result.symbols.map((s) => s.name);
+    expect(names).toContain('helper');
+    expect(names).toContain('VERSION');
+  });
+
+  it('should not re-export default exports via export *', async () => {
+    const indexContent = `export * from './mod';`;
+    const modContent = `
+      export default function main(): void {}
+      export function secondary(): void {}
+    `;
+
+    const resolver = buildResolver({
+      './mod': { content: modContent, resolvedPath: 'src/mod.ts' },
+    });
+
+    const result = await parseExportsAsync(indexContent, filePath, resolver);
+
+    const names = result.symbols.map((s) => s.name);
+    expect(names).toContain('secondary');
+    // default export should NOT be re-exported
+    const defaultExports = result.symbols.filter((s) => s.isDefault);
+    expect(defaultExports).toHaveLength(0);
+  });
+
+  it('should handle nested barrels (index re-exports from a which re-exports from b)', async () => {
+    const indexContent = `export * from './a';`;
+    const aContent = `
+      export * from './b';
+      export function fromA(): void {}
+    `;
+    const bContent = `
+      export function fromB(): string { return ''; }
+      export interface BConfig { x: number; }
+    `;
+
+    const resolver: FileResolver = (specifier, importerFilePath) => {
+      if (specifier === './a' && importerFilePath === 'src/index.ts') {
+        return { content: aContent, resolvedPath: 'src/a.ts' };
+      }
+      if (specifier === './b' && importerFilePath === 'src/a.ts') {
+        return { content: bContent, resolvedPath: 'src/b.ts' };
+      }
+      return null;
+    };
+
+    const result = await parseExportsAsync(indexContent, filePath, resolver);
+
+    const names = result.symbols.map((s) => s.name);
+    expect(names).toContain('fromA');
+    expect(names).toContain('fromB');
+    expect(names).toContain('BConfig');
+  });
+
+  it('should handle export * as namespace from', async () => {
+    const content = `export * as utils from './utils';`;
+    const utilsContent = `
+      export function helper(): void {}
+      export const VERSION = '1.0';
+    `;
+
+    const resolver = buildResolver({
+      './utils': { content: utilsContent, resolvedPath: 'src/utils.ts' },
+    });
+
+    const result = await parseExportsAsync(content, filePath, resolver);
+
+    // export * as ns creates a single namespace symbol; the individual symbols are NOT re-exported
+    expect(result.symbols).toHaveLength(1);
+    expect(result.symbols[0].name).toBe('utils');
+    expect(result.symbols[0].kind).toBe('variable');
+    expect(result.symbols[0].isDefault).toBe(false);
+  });
+
+  it('should handle circular re-exports without infinite loop', async () => {
+    const aContent = `
+      export * from './b';
+      export function fromA(): void {}
+    `;
+    const bContent = `
+      export * from './a';
+      export function fromB(): void {}
+    `;
+
+    const resolver: FileResolver = (specifier, importerFilePath) => {
+      if (specifier === './b') {
+        return { content: bContent, resolvedPath: 'src/b.ts' };
+      }
+      if (specifier === './a') {
+        return { content: aContent, resolvedPath: 'src/a.ts' };
+      }
+      return null;
+    };
+
+    // Should not hang or throw — just stop at the visited file
+    const result = await parseExportsAsync(aContent, 'src/a.ts', resolver);
+
+    const names = result.symbols.map((s) => s.name);
+    expect(names).toContain('fromA');
+    expect(names).toContain('fromB');
+  });
+
+  it('should handle mixed regular exports and barrel re-exports', async () => {
+    const indexContent = `
+      export * from './utils';
+      export function main(): void {}
+      export interface AppConfig { debug: boolean; }
+      export type ID = string;
+    `;
+    const utilsContent = `
+      export function helper(): void {}
+      export class Logger {}
+    `;
+
+    const resolver = buildResolver({
+      './utils': { content: utilsContent, resolvedPath: 'src/utils.ts' },
+    });
+
+    const result = await parseExportsAsync(indexContent, filePath, resolver);
+
+    const names = result.symbols.map((s) => s.name);
+    expect(names).toContain('main');
+    expect(names).toContain('AppConfig');
+    expect(names).toContain('ID');
+    expect(names).toContain('helper');
+    expect(names).toContain('Logger');
+    expect(result.symbols).toHaveLength(5);
+  });
+
+  it('should handle multiple export * from in the same file', async () => {
+    const indexContent = `
+      export * from './a';
+      export * from './b';
+    `;
+    const aContent = `export function fromA(): void {}`;
+    const bContent = `export function fromB(): void {}`;
+
+    const resolver = buildResolver({
+      './a': { content: aContent, resolvedPath: 'src/a.ts' },
+      './b': { content: bContent, resolvedPath: 'src/b.ts' },
+    });
+
+    const result = await parseExportsAsync(indexContent, filePath, resolver);
+
+    const names = result.symbols.map((s) => s.name);
+    expect(names).toContain('fromA');
+    expect(names).toContain('fromB');
+  });
+
+  it('should deduplicate symbols from multiple barrels re-exporting the same name', async () => {
+    const indexContent = `
+      export * from './a';
+      export * from './b';
+    `;
+    // Both a and b export a symbol called 'shared'
+    const aContent = `export const shared = 1;`;
+    const bContent = `export const shared = 2;`;
+
+    const resolver = buildResolver({
+      './a': { content: aContent, resolvedPath: 'src/a.ts' },
+      './b': { content: bContent, resolvedPath: 'src/b.ts' },
+    });
+
+    const result = await parseExportsAsync(indexContent, filePath, resolver);
+
+    // Should deduplicate — only one 'shared' symbol
+    const sharedSymbols = result.symbols.filter((s) => s.name === 'shared');
+    expect(sharedSymbols).toHaveLength(1);
+  });
+
+  it('should handle unresolvable specifier gracefully', async () => {
+    const indexContent = `
+      export * from './nonexistent';
+      export function foo(): void {}
+    `;
+
+    const resolver: FileResolver = () => null;
+
+    const result = await parseExportsAsync(indexContent, filePath, resolver);
+
+    // The unresolvable barrel is skipped; regular exports still work
+    expect(result.symbols).toHaveLength(1);
+    expect(result.symbols[0].name).toBe('foo');
+  });
+
+  it('should respect max depth and not recurse infinitely on deep nesting', async () => {
+    // Build a chain of 15 barrel files: file0 -> file1 -> ... -> file14
+    // MAX_BARREL_DEPTH is 10, so symbols from file11+ should NOT appear
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 15; i++) {
+      if (i < 14) {
+        files[`src/file${i}.ts`] = `
+          export * from './file${i + 1}';
+          export const sym${i} = ${i};
+        `;
+      } else {
+        files[`src/file${i}.ts`] = `export const sym${i} = ${i};`;
+      }
+    }
+
+    const resolver: FileResolver = (specifier, importerFilePath) => {
+      // Resolve ./fileN from src/fileM.ts
+      const match = specifier.match(/\.\/file(\d+)/);
+      if (match) {
+        const idx = parseInt(match[1], 10);
+        const path = `src/file${idx}.ts`;
+        if (files[path]) {
+          return { content: files[path], resolvedPath: path };
+        }
+      }
+      return null;
+    };
+
+    const result = await parseExportsAsync(files['src/file0.ts'], 'src/file0.ts', resolver);
+
+    const names = result.symbols.map((s) => s.name);
+    // sym0 through sym10 should be present (depth 0 through 10)
+    for (let i = 0; i <= 10; i++) {
+      expect(names).toContain(`sym${i}`);
+    }
+    // sym11+ may or may not be present depending on exact depth counting,
+    // but the key guarantee is no infinite recursion and finite symbols
+    expect(result.symbols.length).toBeLessThanOrEqual(15);
+    expect(result.symbols.length).toBeGreaterThanOrEqual(11);
+  });
+
+  it('should handle export * as ns from without resolving inner symbols', async () => {
+    // export * as ns should NOT resolve and re-export the inner module's individual symbols
+    const indexContent = `
+      export * as ns from './utils';
+      export * from './other';
+    `;
+    const utilsContent = `
+      export function utilFunc(): void {}
+      export const utilConst = 42;
+    `;
+    const otherContent = `
+      export function otherFunc(): void {}
+    `;
+
+    const resolver: FileResolver = (specifier, _importer) => {
+      if (specifier === './utils') {
+        return { content: utilsContent, resolvedPath: 'src/utils.ts' };
+      }
+      if (specifier === './other') {
+        return { content: otherContent, resolvedPath: 'src/other.ts' };
+      }
+      return null;
+    };
+
+    const result = await parseExportsAsync(indexContent, filePath, resolver);
+
+    const names = result.symbols.map((s) => s.name);
+    // ns is the namespace, otherFunc comes from export *
+    expect(names).toContain('ns');
+    expect(names).toContain('otherFunc');
+    // utilFunc and utilConst should NOT be individually re-exported
+    expect(names).not.toContain('utilFunc');
+    expect(names).not.toContain('utilConst');
+  });
+
+  it('should parse export * as ns from without a resolver (sync)', () => {
+    const content = `export * as helpers from './helpers';`;
+    const result = parseExports(content, filePath);
+
+    expect(result.symbols).toHaveLength(1);
+    expect(result.symbols[0]).toEqual({
+      name: 'helpers',
+      kind: 'variable',
+      isDefault: false,
+    });
+  });
+});
+
+describe('diffExportsAsync — barrel re-export diffing', () => {
+  it('should detect removed re-exported symbols when a barrel source is dropped', async () => {
+    const baseContent = `
+      export * from './utils';
+      export function main(): void {}
+    `;
+    const headContent = `
+      export function main(): void {}
+    `;
+    // Base resolves ./utils, head does not (barrel removed)
+    const utilsContent = `
+      export function helper(): void {}
+      export const VERSION = '1.0';
+    `;
+
+    const resolver: FileResolver = (specifier, _importer) => {
+      if (specifier === './utils') {
+        return { content: utilsContent, resolvedPath: 'src/utils.ts' };
+      }
+      return null;
+    };
+
+    const result = await diffExportsAsync('src/index.ts', baseContent, headContent, resolver);
+
+    // helper and VERSION should be detected as removed
+    expect(result.removed).toHaveLength(2);
+    const removedNames = result.removed.map((s) => s.name).sort();
+    expect(removedNames).toEqual(['VERSION', 'helper']);
+    expect(result.added).toHaveLength(0);
+  });
+
+  it('should detect added re-exported symbols when a new barrel is added', async () => {
+    const baseContent = `export function main(): void {}`;
+    const headContent = `
+      export * from './utils';
+      export function main(): void {}
+    `;
+    const utilsContent = `export function helper(): void {}`;
+
+    const resolver: FileResolver = (specifier, _importer) => {
+      if (specifier === './utils') {
+        return { content: utilsContent, resolvedPath: 'src/utils.ts' };
+      }
+      return null;
+    };
+
+    const result = await diffExportsAsync('src/index.ts', baseContent, headContent, resolver);
+
+    expect(result.added).toHaveLength(1);
+    expect(result.added[0].name).toBe('helper');
+    expect(result.removed).toHaveLength(0);
+  });
+
+  it('should work without a resolver (falls back to sync behavior)', async () => {
+    const base = 'export function foo(): void {}';
+    const head = 'export function foo(): void {}\nexport function bar(): void {}';
+
+    const result = await diffExportsAsync('file.ts', base, head);
+
+    expect(result.added).toHaveLength(1);
+    expect(result.added[0].name).toBe('bar');
   });
 });

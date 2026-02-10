@@ -1,6 +1,21 @@
 import { ExportedSymbol, FileExports } from '../types.js';
 
 /**
+ * Callback type for resolving barrel re-exports.
+ *
+ * Given a module specifier (e.g. `'./utils'`) and the path of the file that
+ * contains the `export * from` statement, the resolver should return the
+ * content of the target module as a string, or `null` if it cannot be resolved.
+ *
+ * The second return value is the resolved file path (repo-relative) for the
+ * target module, used for cycle detection.
+ */
+export type FileResolver = (
+  moduleSpecifier: string,
+  importerFilePath: string,
+) => Promise<{ content: string; resolvedPath: string } | null> | { content: string; resolvedPath: string } | null;
+
+/**
  * Regex patterns for extracting exported symbols from TypeScript/JavaScript.
  *
  * Each pattern captures:
@@ -8,6 +23,12 @@ import { ExportedSymbol, FileExports } from '../types.js';
  *  - Optionally the kind (function, class, etc.)
  *  - Optionally the signature (parameter list + return type for functions)
  */
+
+// export * from './module'
+const EXPORT_STAR_RE = /export\s+\*\s+from\s+['"]([^'"]+)['"]/g;
+
+// export * as ns from './module'
+const EXPORT_STAR_AS_RE = /export\s+\*\s+as\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g;
 
 // export [declare] async? function[*] NAME(...)
 const EXPORT_FUNCTION_RE =
@@ -77,10 +98,77 @@ function normalizeSignature(sig: string): string {
   return sig.replace(/\s+/g, ' ').trim();
 }
 
+/** Maximum depth for recursively resolving barrel re-exports. */
+const MAX_BARREL_DEPTH = 10;
+
 /**
  * Parse a TypeScript/JavaScript file's content to extract all exported symbols.
+ *
+ * When a `fileResolver` is provided, `export * from '...'` barrel re-exports
+ * are resolved by reading the target module and recursively parsing its exports.
+ * The `export *` syntax re-exports all named exports but NOT the default export
+ * (standard ES module behavior).
+ *
+ * For `export * as ns from '...'`, a single namespace symbol is created.
  */
-export function parseExports(content: string, filePath: string): FileExports {
+export function parseExports(
+  content: string,
+  filePath: string,
+  fileResolver?: FileResolver,
+): FileExports {
+  // Delegate to the internal async implementation and unwrap if synchronous
+  const result = parseExportsInternal(
+    content,
+    filePath,
+    fileResolver ?? null,
+    new Set<string>(),
+    0,
+  );
+
+  // If no resolver is provided, the result is always synchronous
+  if (result instanceof Promise) {
+    // Cannot await in a sync function — wrap in a sync-compatible pattern.
+    // In practice, if callers use a fileResolver they should use parseExportsAsync.
+    // For backward compatibility parseExports stays sync when no resolver is given.
+    throw new Error(
+      'parseExports returned a Promise unexpectedly. Use parseExportsAsync for barrel re-export resolution.',
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Async version of parseExports that supports barrel re-export resolution.
+ *
+ * When `fileResolver` is provided, `export * from '...'` statements are
+ * recursively resolved. Without a resolver, behaves identically to `parseExports`.
+ */
+export async function parseExportsAsync(
+  content: string,
+  filePath: string,
+  fileResolver?: FileResolver | null,
+): Promise<FileExports> {
+  return parseExportsInternal(
+    content,
+    filePath,
+    fileResolver ?? null,
+    new Set<string>(),
+    0,
+  );
+}
+
+/**
+ * Internal implementation that returns a Promise when barrel resolution is needed
+ * and a plain value when it is not.
+ */
+function parseExportsInternal(
+  content: string,
+  filePath: string,
+  fileResolver: FileResolver | null,
+  visited: Set<string>,
+  depth: number,
+): FileExports | Promise<FileExports> {
   const symbols: ExportedSymbol[] = [];
   const seen = new Set<string>();
 
@@ -356,7 +444,96 @@ export function parseExports(content: string, filePath: string): FileExports {
     }
   }
 
-  return { filePath, symbols };
+  // 12. export * as ns from '...' (namespace re-export — must be checked BEFORE export *)
+  const starAsSpecifiers = new Set<string>();
+  {
+    const re = new RegExp(EXPORT_STAR_AS_RE.source, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(stripped)) !== null) {
+      const nsName = m[1];
+      const specifier = m[2];
+      starAsSpecifiers.add(specifier);
+      addSymbol({
+        name: nsName,
+        kind: 'variable',
+        isDefault: false,
+      });
+    }
+  }
+
+  // 13. export * from '...' (barrel re-export)
+  // Collect the specifiers. If a resolver is provided, we resolve them
+  // recursively. Otherwise we just skip them (backward-compatible).
+  const barrelSpecifiers: string[] = [];
+  {
+    const re = new RegExp(EXPORT_STAR_RE.source, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(stripped)) !== null) {
+      const specifier = m[1];
+      // Skip if this specifier was already captured by export * as ns from '...'
+      if (!starAsSpecifiers.has(specifier)) {
+        barrelSpecifiers.push(specifier);
+      }
+    }
+  }
+
+  // If there are no barrel specifiers or no resolver, return synchronously
+  if (barrelSpecifiers.length === 0 || fileResolver === null || depth >= MAX_BARREL_DEPTH) {
+    return { filePath, symbols };
+  }
+
+  // Mark current file as visited to prevent circular re-exports
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  if (visited.has(normalizedPath)) {
+    return { filePath, symbols };
+  }
+  visited.add(normalizedPath);
+
+  // Resolve barrel re-exports (potentially async)
+  const resolveBarrels = async (): Promise<FileExports> => {
+    for (const specifier of barrelSpecifiers) {
+      const resolved = await fileResolver(specifier, filePath);
+      if (resolved === null) {
+        continue;
+      }
+
+      const { content: targetContent, resolvedPath: targetPath } = resolved;
+      const normalizedTargetPath = targetPath.replace(/\\/g, '/');
+
+      // Skip if we've already visited this file (circular re-export)
+      if (visited.has(normalizedTargetPath)) {
+        continue;
+      }
+
+      // Recursively parse the target file's exports
+      const targetExports = await parseExportsInternal(
+        targetContent,
+        targetPath,
+        fileResolver,
+        visited,
+        depth + 1,
+      );
+
+      // Add all non-default symbols from the target
+      // (export * does NOT re-export default)
+      for (const sym of targetExports.symbols) {
+        if (!sym.isDefault) {
+          addSymbol(sym);
+        }
+      }
+    }
+
+    return { filePath, symbols };
+  };
+
+  return resolveBarrels();
+}
+
+/** Return type for diffExports / diffExportsAsync. */
+export interface ExportDiffResult {
+  removed: ExportedSymbol[];
+  added: ExportedSymbol[];
+  modified: Array<{ before: ExportedSymbol; after: ExportedSymbol }>;
 }
 
 /**
@@ -371,14 +548,37 @@ export function diffExports(
   basePath: string,
   baseContent: string,
   headContent: string,
-): {
-  removed: ExportedSymbol[];
-  added: ExportedSymbol[];
-  modified: Array<{ before: ExportedSymbol; after: ExportedSymbol }>;
-} {
+): ExportDiffResult {
   const baseExports = parseExports(baseContent, basePath);
   const headExports = parseExports(headContent, basePath);
 
+  return computeDiff(baseExports, headExports);
+}
+
+/**
+ * Async version of diffExports that supports barrel re-export resolution.
+ */
+export async function diffExportsAsync(
+  basePath: string,
+  baseContent: string,
+  headContent: string,
+  fileResolver?: FileResolver | null,
+): Promise<ExportDiffResult> {
+  const [baseExports, headExports] = await Promise.all([
+    parseExportsAsync(baseContent, basePath, fileResolver),
+    parseExportsAsync(headContent, basePath, fileResolver),
+  ]);
+
+  return computeDiff(baseExports, headExports);
+}
+
+/**
+ * Compute the diff between two sets of file exports.
+ */
+function computeDiff(
+  baseExports: FileExports,
+  headExports: FileExports,
+): ExportDiffResult {
   // Build lookup maps keyed by (name + isDefault) for accurate matching
   const baseMap = new Map<string, ExportedSymbol>();
   for (const sym of baseExports.symbols) {

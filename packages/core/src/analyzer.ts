@@ -6,6 +6,7 @@ import { checkTestCoverage } from './coverage/coverage-checker.js';
 import { checkDocStaleness } from './docs/staleness-checker.js';
 import { buildImpactGraph } from './impact/impact-graph.js';
 import { calculateRisk } from './risk/risk-calculator.js';
+import { buildReverseDependencyMap } from './imports/import-resolver.js';
 
 /**
  * Resolve the default base branch for the repository by checking whether
@@ -69,10 +70,11 @@ function generateSummary(
  *   1. Resolve base and head branches
  *   2. Verify the repository and branches
  *   3. Parse the diff to get changed files
- *   4. Run breaking-change detection, test-coverage checking, doc-staleness
+ *   4. Build reverse dependency map once (shared by breaking + impact)
+ *   5. Run breaking-change detection, test-coverage checking, doc-staleness
  *      checking, and impact-graph building in parallel
- *   5. Calculate the overall risk score
- *   6. Generate a human-readable summary
+ *   6. Calculate the overall risk score
+ *   7. Generate a human-readable summary
  */
 export async function analyzePR(options: AnalysisOptions): Promise<PRAnalysis> {
   const { repoPath, skipBreaking, skipCoverage, skipDocs } = options;
@@ -96,13 +98,16 @@ export async function analyzePR(options: AnalysisOptions): Promise<PRAnalysis> {
   // --- 3. Parse the diff ----------------------------------------------------
   const changedFiles = await parseDiff(repoPath, baseBranch, headBranch);
 
-  // --- 4. Run parallel analysis steps ---------------------------------------
+  // --- 4. Build reverse dependency map once (shared by breaking + impact) ---
+  const reverseDeps = await buildReverseDependencyMap(repoPath);
+
+  // --- 5. Run parallel analysis steps ---------------------------------------
   const [breakingChanges, testCoverage, docStaleness, impactGraph] =
     await Promise.all([
       // Breaking change detection
       skipBreaking
         ? Promise.resolve<BreakingChange[]>([])
-        : detectBreakingChanges(repoPath, baseBranch, headBranch, changedFiles),
+        : detectBreakingChanges(repoPath, baseBranch, headBranch, changedFiles, reverseDeps),
 
       // Test coverage analysis
       skipCoverage
@@ -123,10 +128,10 @@ export async function analyzePR(options: AnalysisOptions): Promise<PRAnalysis> {
         : checkDocStaleness(repoPath, changedFiles, baseBranch, headBranch),
 
       // Impact graph building
-      buildImpactGraph(repoPath, changedFiles),
+      buildImpactGraph(repoPath, changedFiles, 3, reverseDeps),
     ]);
 
-  // --- 5. Calculate risk score ----------------------------------------------
+  // --- 6. Calculate risk score ----------------------------------------------
   const riskScore = calculateRisk(
     changedFiles,
     breakingChanges,
@@ -135,7 +140,7 @@ export async function analyzePR(options: AnalysisOptions): Promise<PRAnalysis> {
     impactGraph,
   );
 
-  // --- 6. Generate summary --------------------------------------------------
+  // --- 7. Generate summary --------------------------------------------------
   const summary = generateSummary(
     changedFiles,
     breakingChanges,
@@ -143,7 +148,7 @@ export async function analyzePR(options: AnalysisOptions): Promise<PRAnalysis> {
     riskScore,
   );
 
-  // --- 7. Assemble and return the full analysis -----------------------------
+  // --- 8. Assemble and return the full analysis -----------------------------
   return {
     repoPath,
     baseBranch,

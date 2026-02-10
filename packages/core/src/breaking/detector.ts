@@ -2,7 +2,7 @@ import simpleGit from 'simple-git';
 import { BreakingChange, ChangedFile } from '../types.js';
 import { diffExports, parseExports } from './export-differ.js';
 import { diffSignatures } from './signature-differ.js';
-import { findConsumers } from '../imports/import-resolver.js';
+import { findConsumers, ReverseDependencyMap } from '../imports/import-resolver.js';
 
 /** File extensions that we analyze for breaking changes. */
 const ANALYZABLE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
@@ -37,10 +37,11 @@ async function getFileAtRef(
  * Detect breaking changes between two branches by analyzing export differences
  * in changed source files.
  *
- * @param repoPath     - Absolute path to the git repository
- * @param baseBranch   - The base branch/ref (e.g. "main", "origin/main")
- * @param headBranch   - The head branch/ref (e.g. "feature/xyz", "HEAD")
- * @param changedFiles - List of files changed between the two branches
+ * @param repoPath               - Absolute path to the git repository
+ * @param baseBranch             - The base branch/ref (e.g. "main", "origin/main")
+ * @param headBranch             - The head branch/ref (e.g. "feature/xyz", "HEAD")
+ * @param changedFiles           - List of files changed between the two branches
+ * @param reverseDependencyMap   - Optional pre-built reverse dependency map to avoid a redundant repo scan
  * @returns Array of detected breaking changes
  */
 export async function detectBreakingChanges(
@@ -48,6 +49,7 @@ export async function detectBreakingChanges(
   baseBranch: string,
   headBranch: string,
   changedFiles: ChangedFile[],
+  reverseDependencyMap?: ReverseDependencyMap,
 ): Promise<BreakingChange[]> {
   const git = simpleGit(repoPath);
   const breakingChanges: BreakingChange[] = [];
@@ -239,7 +241,7 @@ export async function detectBreakingChanges(
   // scan repo source files to find which ones import from those files.
   if (breakingChanges.length > 0) {
     const affectedFiles = new Set(breakingChanges.map((bc) => bc.filePath));
-    const consumersMap = await findConsumers(repoPath, affectedFiles);
+    const consumersMap = await findConsumers(repoPath, affectedFiles, reverseDependencyMap);
 
     for (const bc of breakingChanges) {
       bc.consumers = consumersMap.get(bc.filePath) ?? [];

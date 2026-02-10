@@ -45,6 +45,11 @@ vi.mock('../src/risk/risk-calculator.js', () => ({
   calculateRisk: (...args: unknown[]) => mockCalculateRisk(...args),
 }));
 
+const mockBuildReverseDependencyMap = vi.fn();
+vi.mock('../src/imports/import-resolver.js', () => ({
+  buildReverseDependencyMap: (...args: unknown[]) => mockBuildReverseDependencyMap(...args),
+}));
+
 import { resolveDefaultBaseBranch, analyzePR } from '../src/analyzer.js';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -114,6 +119,8 @@ const fakeRiskScore: RiskAssessment = {
   ],
 };
 
+const fakeReverseDeps = new Map<string, string[]>();
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function setupDefaultMocks() {
@@ -126,6 +133,7 @@ function setupDefaultMocks() {
   mockCheckDocStaleness.mockResolvedValue(fakeDocStaleness);
   mockBuildImpactGraph.mockResolvedValue(fakeImpactGraph);
   mockCalculateRisk.mockReturnValue(fakeRiskScore);
+  mockBuildReverseDependencyMap.mockResolvedValue(fakeReverseDeps);
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -209,7 +217,7 @@ describe('analyzePR', () => {
       });
 
       expect(mockDetectBreakingChanges).toHaveBeenCalledWith(
-        '/fake/repo', 'main', 'feature/test', fakeChangedFiles,
+        '/fake/repo', 'main', 'feature/test', fakeChangedFiles, fakeReverseDeps,
       );
     });
 
@@ -248,7 +256,7 @@ describe('analyzePR', () => {
         headBranch: 'feature/test',
       });
 
-      expect(mockBuildImpactGraph).toHaveBeenCalledWith('/fake/repo', fakeChangedFiles);
+      expect(mockBuildImpactGraph).toHaveBeenCalledWith('/fake/repo', fakeChangedFiles, 3, fakeReverseDeps);
     });
 
     it('calls calculateRisk with all analysis results', async () => {
@@ -387,7 +395,7 @@ describe('analyzePR', () => {
         skipDocs: true,
       });
 
-      expect(mockBuildImpactGraph).toHaveBeenCalledWith('/fake/repo', fakeChangedFiles);
+      expect(mockBuildImpactGraph).toHaveBeenCalledWith('/fake/repo', fakeChangedFiles, 3, fakeReverseDeps);
     });
   });
 
@@ -431,6 +439,7 @@ describe('analyzePR', () => {
       ).rejects.toThrow();
 
       expect(mockParseDiff).not.toHaveBeenCalled();
+      expect(mockBuildReverseDependencyMap).not.toHaveBeenCalled();
       expect(mockDetectBreakingChanges).not.toHaveBeenCalled();
       expect(mockCheckTestCoverage).not.toHaveBeenCalled();
       expect(mockCheckDocStaleness).not.toHaveBeenCalled();

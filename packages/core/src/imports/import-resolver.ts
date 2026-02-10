@@ -79,19 +79,25 @@ export function resolveImport(
 }
 
 /**
- * Find all source files that import from the given set of file paths.
- *
- * Returns a map: target file path -> list of consumer file paths that import it.
+ * A reverse dependency map: key = file that is imported,
+ * value = list of files that import it.
  */
-export async function findConsumers(
-  repoPath: string,
-  targetFiles: Set<string>,
-): Promise<Map<string, string[]>> {
-  const consumers = new Map<string, string[]>();
-  for (const target of targetFiles) {
-    consumers.set(target, []);
-  }
+export type ReverseDependencyMap = Map<string, string[]>;
 
+/**
+ * Scan the entire repo and build a reverse dependency map.
+ *
+ * The map keys are repo-relative file paths; each value is the list of
+ * repo-relative paths of files that import that key.
+ *
+ * This is the expensive I/O step (fast-glob + batch file reads) that both
+ * `findConsumers()` and `buildImpactGraph()` need. By running it once in
+ * `analyzePR()` and passing the result to both consumers, the repo scan
+ * is not duplicated.
+ */
+export async function buildReverseDependencyMap(
+  repoPath: string,
+): Promise<ReverseDependencyMap> {
   // Discover all source files in the repo
   const absolutePaths = await fg('**/*.{ts,tsx,js,jsx}', {
     cwd: repoPath,
@@ -101,6 +107,8 @@ export async function findConsumers(
 
   const repoRelativePaths = absolutePaths.map((abs) => relative(repoPath, abs));
   const allFilesSet = new Set(repoRelativePaths);
+
+  const reverseDeps: ReverseDependencyMap = new Map();
 
   // Scan files in batches to avoid EMFILE
   const BATCH_SIZE = 50;
@@ -128,12 +136,46 @@ export async function findConsumers(
             continue;
           }
 
-          if (targetFiles.has(resolved)) {
-            consumers.get(resolved)!.push(relPath);
+          let dependents = reverseDeps.get(resolved);
+          if (!dependents) {
+            dependents = [];
+            reverseDeps.set(resolved, dependents);
           }
+          dependents.push(relPath);
         }
       }),
     );
+  }
+
+  return reverseDeps;
+}
+
+/**
+ * Find all source files that import from the given set of file paths.
+ *
+ * Returns a map: target file path -> list of consumer file paths that import it.
+ *
+ * When a pre-built `reverseDependencyMap` is provided, the expensive repo scan
+ * is skipped and the map is used directly. Otherwise the scan is performed
+ * internally (backward-compatible).
+ */
+export async function findConsumers(
+  repoPath: string,
+  targetFiles: Set<string>,
+  reverseDependencyMap?: ReverseDependencyMap,
+): Promise<Map<string, string[]>> {
+  const consumers = new Map<string, string[]>();
+  for (const target of targetFiles) {
+    consumers.set(target, []);
+  }
+
+  const reverseDeps = reverseDependencyMap ?? await buildReverseDependencyMap(repoPath);
+
+  for (const target of targetFiles) {
+    const dependents = reverseDeps.get(target);
+    if (dependents) {
+      consumers.set(target, [...dependents]);
+    }
   }
 
   return consumers;

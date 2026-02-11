@@ -1,0 +1,26 @@
+{
+  "name": "@pr-impact/action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Action for AI-powered PR impact analysis",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "tsx ../../scripts/embed-templates.ts",
+    "build": "tsup",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@pr-impact/tools-core": "workspace:*",
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@actions/core": "^1.11.0",
+    "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "~5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

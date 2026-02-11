@@ -51,16 +51,6 @@ export default tseslint.config(
     },
   },
 
-  // ── CLI command files: relax unsafe-* rules (Commander opts are `any`) ────
-  {
-    files: ['packages/cli/src/commands/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-    },
-  },
-
   // ── Test files: disable type-checked rules + enable vitest ───────────────
   {
     files: ['**/__tests__/**/*.ts'],
@@ -74,9 +64,9 @@ export default tseslint.config(
     },
   },
 
-  // ── Config files outside tsconfig (tsup, vitest configs) ─────────────────
+  // ── Config files outside tsconfig (tsup, vitest configs, build scripts) ──
   {
-    files: ['**/tsup.config.ts', '**/vitest.config.ts', 'vitest.config.ts'],
+    files: ['**/tsup.config.ts', '**/vitest.config.ts', 'vitest.config.ts', 'scripts/*.ts'],
     ...tseslint.configs.disableTypeChecked,
   },
 

@@ -56,11 +56,11 @@ jobs:
       - name: Build (required for cross-package type resolution)
         run: pnpm build
 
-      - name: Type check core
-        run: pnpm exec tsc --noEmit -p packages/core/tsconfig.json
+      - name: Type check tools-core
+        run: pnpm exec tsc --noEmit -p packages/tools-core/tsconfig.json
 
-      - name: Type check cli
-        run: pnpm exec tsc --noEmit -p packages/cli/tsconfig.json
+      - name: Type check tools
+        run: pnpm exec tsc --noEmit -p packages/tools/tsconfig.json
 
-      - name: Type check mcp-server
-        run: pnpm exec tsc --noEmit -p packages/mcp-server/tsconfig.json
+      - name: Type check action
+        run: pnpm exec tsc --noEmit -p packages/action/tsconfig.json

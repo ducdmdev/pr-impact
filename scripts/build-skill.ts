@@ -10,7 +10,8 @@ const reportTemplate = readFileSync(resolve(rootDir, 'templates/report-template.
 
 const skillMd = `---
 name: pr-impact
-description: Analyze PR impact — breaking changes, test coverage gaps, doc staleness, impact graph, and risk score
+description: Analyze a pull request for breaking changes, test coverage gaps, stale documentation, and import-graph impact. Produces a weighted 0-100 risk score with a structured Markdown report. Use when reviewing PRs or assessing change scope before merging.
+user-invocable: true
 argument-hint: "[base-branch] [head-branch]"
 ---
 

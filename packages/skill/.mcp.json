@@ -1,6 +1,8 @@
 {
-  "pr-impact-tools": {
-    "command": "npx",
-    "args": ["-y", "@pr-impact/tools"]
+  "mcpServers": {
+    "pr-impact-tools": {
+      "command": "npx",
+      "args": ["-y", "@pr-impact/tools"]
+    }
   }
 }

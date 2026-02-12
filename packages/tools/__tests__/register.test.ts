@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@pr-impact/tools-core', () => ({
-  gitDiff: vi.fn(),
-  readFileAtRef: vi.fn(),
-  listChangedFiles: vi.fn(),
-  searchCode: vi.fn(),
-  findImporters: vi.fn(),
-  listTestFiles: vi.fn(),
-  clearImporterCache: vi.fn(),
-}));
+vi.mock('@pr-impact/tools-core', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@pr-impact/tools-core')>();
+  return {
+    TOOL_DEFS: original.TOOL_DEFS,
+    gitDiff: vi.fn(),
+    readFileAtRef: vi.fn(),
+    listChangedFiles: vi.fn(),
+    searchCode: vi.fn(),
+    findImporters: vi.fn(),
+    listTestFiles: vi.fn(),
+    clearImporterCache: vi.fn(),
+  };
+});
 
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: vi.fn(),

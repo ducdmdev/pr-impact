@@ -173,4 +173,54 @@ describe('action entry point', () => {
 
     expect(core.setFailed).toHaveBeenCalledWith('API connection failed');
   });
+
+  describe('risk score parsing edge cases', () => {
+    it('parses score at boundary 0/100', async () => {
+      setupInputs();
+      vi.mocked(runAnalysis).mockResolvedValue('**Risk Score**: 0/100 (low)');
+
+      await loadIndex();
+
+      expect(core.setOutput).toHaveBeenCalledWith('risk-score', '0');
+      expect(core.setOutput).toHaveBeenCalledWith('risk-level', 'low');
+    });
+
+    it('parses score at boundary 100/100', async () => {
+      setupInputs();
+      vi.mocked(runAnalysis).mockResolvedValue('**Risk Score**: 100/100 (critical)');
+
+      await loadIndex();
+
+      expect(core.setOutput).toHaveBeenCalledWith('risk-score', '100');
+      expect(core.setOutput).toHaveBeenCalledWith('risk-level', 'critical');
+    });
+
+    it('does not fail threshold check when score is -1 (unparseable)', async () => {
+      setupInputs({ threshold: '50' });
+      vi.mocked(runAnalysis).mockResolvedValue('Report without risk score format');
+
+      await loadIndex();
+
+      expect(core.setOutput).toHaveBeenCalledWith('risk-score', '-1');
+      expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    it('handles score equal to threshold (>= comparison)', async () => {
+      setupInputs({ threshold: '42' });
+      vi.mocked(runAnalysis).mockResolvedValue('**Risk Score**: 42/100 (medium)');
+
+      await loadIndex();
+
+      expect(core.setFailed).toHaveBeenCalledWith('Risk score 42 exceeds threshold 42');
+    });
+
+    it('handles non-Error rejection in main()', async () => {
+      setupInputs();
+      vi.mocked(runAnalysis).mockRejectedValue('string error');
+
+      await loadIndex();
+
+      expect(core.setFailed).toHaveBeenCalledWith('string error');
+    });
+  });
 });

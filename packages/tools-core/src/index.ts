@@ -20,3 +20,6 @@ export type { FindImportersParams, FindImportersResult } from './tools/find-impo
 
 export { listTestFiles } from './tools/list-tests.js';
 export type { ListTestFilesParams, ListTestFilesResult } from './tools/list-tests.js';
+
+export { TOOL_DEFS } from './tool-defs.js';
+export type { ToolDef, ToolParamDef } from './tool-defs.js';

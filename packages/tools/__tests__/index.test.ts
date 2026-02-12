@@ -12,16 +12,20 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
   StdioServerTransport: vi.fn(),
 }));
 
-// Mock all tools-core handlers
-vi.mock('@pr-impact/tools-core', () => ({
-  gitDiff: vi.fn().mockResolvedValue({ diff: 'mock diff' }),
-  readFileAtRef: vi.fn().mockResolvedValue({ content: 'mock content' }),
-  listChangedFiles: vi.fn().mockResolvedValue({ files: [], totalAdditions: 0, totalDeletions: 0 }),
-  searchCode: vi.fn().mockResolvedValue({ matches: [] }),
-  findImporters: vi.fn().mockResolvedValue({ importers: [] }),
-  listTestFiles: vi.fn().mockResolvedValue({ testFiles: [] }),
-  clearImporterCache: vi.fn(),
-}));
+// Mock all tools-core handlers but keep TOOL_DEFS from the real module
+vi.mock('@pr-impact/tools-core', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@pr-impact/tools-core')>();
+  return {
+    TOOL_DEFS: original.TOOL_DEFS,
+    gitDiff: vi.fn().mockResolvedValue({ diff: 'mock diff' }),
+    readFileAtRef: vi.fn().mockResolvedValue({ content: 'mock content' }),
+    listChangedFiles: vi.fn().mockResolvedValue({ files: [], totalAdditions: 0, totalDeletions: 0 }),
+    searchCode: vi.fn().mockResolvedValue({ matches: [] }),
+    findImporters: vi.fn().mockResolvedValue({ importers: [] }),
+    listTestFiles: vi.fn().mockResolvedValue({ testFiles: [] }),
+    clearImporterCache: vi.fn(),
+  };
+});
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 

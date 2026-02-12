@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { TOOL_DEFS } from '@pr-impact/tools-core';
 import { executeTool } from './tools.js';
 import { SYSTEM_PROMPT, REPORT_TEMPLATE } from './generated/templates.js';
 
@@ -13,79 +14,17 @@ export interface AnalysisOptions {
 const MAX_ITERATIONS = 30;
 const TIMEOUT_MS = 180_000; // 180 seconds
 
-const TOOL_DEFINITIONS: Anthropic.Tool[] = [
-  {
-    name: 'git_diff',
-    description: 'Get the raw git diff between two branches, optionally for a single file',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        base: { type: 'string', description: 'Base branch or ref' },
-        head: { type: 'string', description: 'Head branch or ref' },
-        file: { type: 'string', description: 'Optional file path for single-file diff' },
-      },
-      required: ['base', 'head'],
-    },
+// Build Anthropic tool definitions from the shared canonical definitions.
+// repoPath is omitted here — it is injected at runtime in the tool execution loop.
+const TOOL_DEFINITIONS: Anthropic.Tool[] = TOOL_DEFS.map((def) => ({
+  name: def.name,
+  description: def.description,
+  input_schema: {
+    type: 'object' as const,
+    properties: def.properties,
+    required: def.required,
   },
-  {
-    name: 'read_file_at_ref',
-    description: 'Read a file content at a specific git ref',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        ref: { type: 'string', description: 'Git ref (branch, commit, tag)' },
-        filePath: { type: 'string', description: 'Repo-relative file path' },
-      },
-      required: ['ref', 'filePath'],
-    },
-  },
-  {
-    name: 'list_changed_files',
-    description: 'List files changed between two branches with status and stats',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        base: { type: 'string', description: 'Base branch or ref' },
-        head: { type: 'string', description: 'Head branch or ref' },
-      },
-      required: ['base', 'head'],
-    },
-  },
-  {
-    name: 'search_code',
-    description: 'Search for a regex pattern in the codebase',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        pattern: { type: 'string', description: 'Regex pattern' },
-        glob: { type: 'string', description: 'File glob to limit scope (e.g. "*.md")' },
-      },
-      required: ['pattern'],
-    },
-  },
-  {
-    name: 'find_importers',
-    description: 'Find files that import a given module',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        modulePath: { type: 'string', description: 'Repo-relative module path' },
-      },
-      required: ['modulePath'],
-    },
-  },
-  {
-    name: 'list_test_files',
-    description: 'Find test files associated with a source file',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        sourceFile: { type: 'string', description: 'Repo-relative source file path' },
-      },
-      required: ['sourceFile'],
-    },
-  },
-];
+}));
 
 export async function runAnalysis(options: AnalysisOptions): Promise<string> {
   const client = new Anthropic({ apiKey: options.apiKey });

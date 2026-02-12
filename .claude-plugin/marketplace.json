@@ -8,7 +8,7 @@
     {
       "name": "pr-impact",
       "description": "Analyze PRs for breaking changes, test coverage gaps, stale documentation, and import-graph impact with a weighted risk score",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "source": "./packages/skill",
       "author": {
         "name": "ducdmdev"

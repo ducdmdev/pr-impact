@@ -1,6 +1,6 @@
 {
   "name": "pr-impact",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI-powered PR impact analysis — detect breaking changes, map blast radius, score risk",
   "author": {
     "name": "ducdmdev"

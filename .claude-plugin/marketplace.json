@@ -1,0 +1,22 @@
+{
+  "name": "pr-impact",
+  "description": "AI-powered PR impact analysis — detect breaking changes, map blast radius, score risk",
+  "owner": {
+    "name": "ducdmdev"
+  },
+  "plugins": [
+    {
+      "name": "pr-impact",
+      "description": "Analyze PRs for breaking changes, test coverage gaps, stale documentation, and import-graph impact with a weighted risk score",
+      "version": "1.0.1",
+      "source": "./packages/skill",
+      "author": {
+        "name": "ducdmdev"
+      },
+      "homepage": "https://github.com/ducdmdev/pr-impact",
+      "repository": "https://github.com/ducdmdev/pr-impact",
+      "license": "MIT",
+      "keywords": ["pr", "analysis", "breaking-changes", "risk-score", "code-review"]
+    }
+  ]
+}

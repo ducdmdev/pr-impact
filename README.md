@@ -42,19 +42,20 @@
 
 ### Claude Code Plugin
 
-Install the plugin to use pr-impact directly in Claude Code:
+Add the pr-impact marketplace and install the plugin:
 
 ```bash
-claude plugin add @pr-impact/skill
+claude plugin marketplace add ducdmdev/pr-impact
+claude plugin install pr-impact@pr-impact
 ```
 
 Then use the `/pr-impact` slash command:
 
 ```
-/pr-impact
+/pr-impact main feature-branch
 ```
 
-This starts an AI-driven analysis of your current branch against `main`, using the MCP tools to gather evidence and produce a structured report.
+This starts an AI-driven analysis comparing the two branches (defaults to `main` vs `HEAD`), using MCP tools to gather evidence and produce a structured report.
 
 ### GitHub Action
 

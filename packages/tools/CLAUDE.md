@@ -28,3 +28,16 @@ src/
 ## Testing
 
 Tests in `__tests__/` mock `McpServer` (including `close()` method) and verify tool registration and SIGINT/SIGTERM cleanup.
+
+<!-- c3-generated: c3-201,c3-210 -->
+## Architecture docs
+
+Before modifying this code, read:
+- Container: `.c3/c3-2-tools/README.md`
+- Components:
+  - `.c3/c3-2-tools/c3-201-mcp-server.md`
+  - `.c3/c3-2-tools/c3-210-tool-registration.md`
+- Patterns: `ref-esm-conventions`
+
+Full refs: `.c3/refs/ref-{name}.md`
+<!-- end-c3-generated -->

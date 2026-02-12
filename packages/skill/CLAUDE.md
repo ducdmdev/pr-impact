@@ -26,3 +26,16 @@ package.json           -- Build script only
 - **MCP integration**: `mcp.json` tells Claude Code to start the `@pr-impact/tools` MCP server, making all 6 tools available during analysis.
 - **No runtime deps**: the published package contains only static files (`.claude-plugin/`, `skill.md`, `mcp.json`).
 - **Published files**: controlled by the `files` array in `package.json` -- only `.claude-plugin`, `skill.md`, and `mcp.json` are included.
+
+<!-- c3-generated: c3-401,c3-410 -->
+## Architecture docs
+
+Before modifying this code, read:
+- Container: `.c3/c3-4-skill/README.md`
+- Components:
+  - `.c3/c3-4-skill/c3-401-plugin-config.md`
+  - `.c3/c3-4-skill/c3-410-skill-prompt.md`
+- Patterns: `ref-build-pipeline`
+
+Full refs: `.c3/refs/ref-{name}.md`
+<!-- end-c3-generated -->

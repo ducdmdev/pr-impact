@@ -30,8 +30,24 @@ src/
 - **Tool input cloning**: `client.ts` clones `toolUse.input` via spread to avoid mutating the conversation history.
 - **Parallel tool execution**: multiple tool_use blocks in a single response are executed concurrently via `Promise.all`.
 - **Risk score parsing**: regex extracts score from report. If parsing fails, sets score to `-1` and level to `unknown` instead of failing.
-- **Comment upsert**: uses `<!-- pr-impact -->` HTML markers to find and update existing comments.
+- **Comment upsert**: uses `<!-- pr-impact:start -->` / `<!-- pr-impact:end -->` HTML markers to find and update existing comments.
 
 ## Testing
 
 Tests in `__tests__/` mock `@actions/core`, `@actions/github`, the Anthropic SDK, and tools-core functions. The entry point test uses `vi.resetModules()` + `vi.doMock()` to re-trigger the top-level `main()` call on each import.
+
+<!-- c3-generated: c3-301,c3-310,c3-311,c3-312,c3-313 -->
+## Architecture docs
+
+Before modifying this code, read:
+- Container: `.c3/c3-3-action/README.md`
+- Components:
+  - `.c3/c3-3-action/c3-301-template-embedding.md`
+  - `.c3/c3-3-action/c3-310-agentic-client.md`
+  - `.c3/c3-3-action/c3-311-tool-dispatcher.md`
+  - `.c3/c3-3-action/c3-312-comment-poster.md`
+  - `.c3/c3-3-action/c3-313-action-entrypoint.md`
+- Patterns: `ref-build-pipeline`
+
+Full refs: `.c3/refs/ref-{name}.md`
+<!-- end-c3-generated -->

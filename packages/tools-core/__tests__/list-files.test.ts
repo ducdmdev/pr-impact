@@ -100,6 +100,56 @@ describe('listChangedFiles', () => {
     expect(simpleGit).toHaveBeenCalledWith(process.cwd());
   });
 
+  it('handles copied files (C status)', async () => {
+    mockGit.diff.mockResolvedValue('C100\tsrc/original.ts\tsrc/copy.ts\n');
+    mockGit.diffSummary.mockResolvedValue({
+      files: [
+        { file: 'src/copy.ts', insertions: 5, deletions: 0, binary: false },
+      ],
+      insertions: 5,
+      deletions: 0,
+    });
+
+    const result = await listChangedFiles({
+      repoPath: '/repo',
+      base: 'main',
+      head: 'HEAD',
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0]).toEqual({
+      path: 'src/copy.ts',
+      status: 'copied',
+      additions: 5,
+      deletions: 0,
+    });
+  });
+
+  it('handles binary files with zero additions/deletions', async () => {
+    mockGit.diff.mockResolvedValue('A\timage.png\n');
+    mockGit.diffSummary.mockResolvedValue({
+      files: [
+        { file: 'image.png', binary: true },
+      ],
+      insertions: 0,
+      deletions: 0,
+    });
+
+    const result = await listChangedFiles({
+      repoPath: '/repo',
+      base: 'main',
+      head: 'HEAD',
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0]).toEqual({
+      path: 'image.png',
+      status: 'added',
+      additions: 0,
+      deletions: 0,
+    });
+  });
+
   it('throws on failure', async () => {
     mockGit.diff.mockRejectedValue(new Error('bad revision'));
 

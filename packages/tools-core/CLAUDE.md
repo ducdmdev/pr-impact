@@ -16,6 +16,7 @@ npx vitest run packages/tools-core           # Run tests
 ```
 src/
   index.ts              -- Barrel exports for all handlers and types
+  tool-defs.ts          -- Canonical tool definitions (TOOL_DEFS, ToolDef, ToolParamDef)
   tools/
     git-diff.ts         -- gitDiff(): raw diff between two refs
     read-file.ts        -- readFileAtRef(): file content at a git ref
@@ -36,3 +37,21 @@ src/
 ## Testing
 
 Tests in `__tests__/` mock `simple-git` and `fast-glob`. No real git repos needed.
+
+<!-- c3-generated: c3-101,c3-110,c3-111,c3-112,c3-113,c3-114,c3-115 -->
+## Architecture docs
+
+Before modifying this code, read:
+- Container: `.c3/c3-1-tools-core/README.md`
+- Components:
+  - `.c3/c3-1-tools-core/c3-101-tool-definitions.md` (tool-defs.ts)
+  - `.c3/c3-1-tools-core/c3-110-git-diff.md`
+  - `.c3/c3-1-tools-core/c3-111-read-file.md`
+  - `.c3/c3-1-tools-core/c3-112-list-files.md`
+  - `.c3/c3-1-tools-core/c3-113-search-code.md`
+  - `.c3/c3-1-tools-core/c3-114-find-importers.md`
+  - `.c3/c3-1-tools-core/c3-115-list-tests.md`
+- Patterns: `ref-git-operations`, `ref-esm-conventions`
+
+Full refs: `.c3/refs/ref-{name}.md`
+<!-- end-c3-generated -->

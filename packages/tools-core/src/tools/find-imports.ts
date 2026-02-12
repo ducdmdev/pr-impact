@@ -110,5 +110,9 @@ function normalizeModulePath(modulePath: string): string {
       break;
     }
   }
+  // Strip /index suffix so bare directory imports match index files
+  if (normalized.endsWith('/index')) {
+    normalized = normalized.slice(0, -'/index'.length);
+  }
   return normalized;
 }

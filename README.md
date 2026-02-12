@@ -167,6 +167,7 @@ pr-impact/
 │   ├── tools-core/             @pr-impact/tools-core
 │   │   └── src/
 │   │       ├── index.ts        Barrel exports
+│   │       ├── tool-defs.ts    Canonical tool definitions (TOOL_DEFS)
 │   │       └── tools/          6 pure handler functions (git-diff, read-file,
 │   │                           list-files, search-code, find-imports, list-tests)
 │   │

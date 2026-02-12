@@ -50,7 +50,10 @@ async function findExistingComment(
   let page = 1;
   while (true) {
     const res = await fetch(`${baseUrl}?per_page=100&page=${page}`, { headers });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`Failed to list PR comments (page ${page}): HTTP ${res.status}`);
+      return null;
+    }
     const comments = (await res.json()) as Array<{ id: number; body?: string }>;
     if (comments.length === 0) break;
     for (const c of comments) {

@@ -44,6 +44,7 @@ Pure handler functions for git/repo operations. Both `tools` (MCP) and `action` 
 ```
 src/
   index.ts                  -- Barrel exports for all handlers and types
+  tool-defs.ts              -- Canonical tool definitions (TOOL_DEFS, ToolDef, ToolParamDef)
   tools/
     git-diff.ts             -- Get raw git diff between two refs
     read-file.ts            -- Read file content at a specific git ref
@@ -150,7 +151,7 @@ scripts/
 - Vitest projects are configured in `vitest.config.ts` (root) with `packages/tools-core`, `packages/tools`, and `packages/action`.
 - Write **unit tests only** -- do not write integration tests that require a real git repository.
 - **Mock git operations** (simple-git calls) and external dependencies where needed; tests should not depend on filesystem or git state.
-- Test files per package (14 files, 94 tests):
+- Test files per package (14 files, 100 tests):
   - `packages/tools-core/__tests__/`: git-diff, read-file, list-files, search-code, find-imports, list-tests, regression (7 files)
   - `packages/tools/__tests__/`: index, register, build-scripts (3 files)
   - `packages/action/__tests__/`: tools, client, comment, index (4 files)

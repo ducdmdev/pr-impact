@@ -77,6 +77,9 @@ export async function runAnalysis(options: AnalysisOptions): Promise<string> {
     );
 
     if (toolUseBlocks.length === 0 || response.stop_reason === 'end_turn') {
+      if (!lastTextOutput) {
+        throw new Error('Analysis completed without producing a report');
+      }
       return lastTextOutput;
     }
 

@@ -59,7 +59,7 @@ packages/
 - **CJS exception** -- the `action` package builds to CJS for GitHub Actions compatibility
 - **TypeScript strict mode** -- no `any` unless unavoidable
 - **No Prettier** -- formatting is handled by `@stylistic/eslint-plugin`
-- **Generated files** -- do not edit `packages/action/src/generated/templates.ts` or `packages/skill/skill.md` manually; they are built from `templates/*.md`
+- **Generated files** -- do not edit `packages/action/src/generated/templates.ts` or `packages/skill/skills/pr-impact/SKILL.md` manually; they are built from `templates/*.md`
 
 ## Writing Tests
 

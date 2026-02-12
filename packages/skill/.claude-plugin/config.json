@@ -1,6 +1,0 @@
-{
-  "name": "@pr-impact/skill",
-  "version": "1.0.0",
-  "description": "AI-powered PR impact analysis — detect breaking changes, map blast radius, score risk",
-  "skills": ["skill.md"]
-}

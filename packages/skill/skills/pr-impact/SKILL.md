@@ -1,13 +1,7 @@
 ---
 name: pr-impact
 description: Analyze PR impact — breaking changes, test coverage gaps, doc staleness, impact graph, and risk score
-arguments:
-  - name: base
-    description: Base branch to compare against (default: main)
-    required: false
-  - name: head
-    description: Head branch to analyze (default: HEAD)
-    required: false
+argument-hint: "[base-branch] [head-branch]"
 ---
 
 You are a PR impact analyzer. Given access to a git repository via MCP tools, analyze a pull request and produce a structured impact report.

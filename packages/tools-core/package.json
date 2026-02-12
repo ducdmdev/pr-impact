@@ -1,6 +1,6 @@
 {
   "name": "@pr-impact/tools-core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Pure tool handler functions for git/repo operations — no framework dependency",
   "type": "module",
   "main": "./dist/index.js",

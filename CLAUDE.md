@@ -91,13 +91,16 @@ Dependencies: @anthropic-ai/sdk, @actions/core, @actions/github, @pr-impact/tool
 Claude Code plugin that provides the `/pr-impact` slash command:
 
 ```
-.claude-plugin/config.json  -- Plugin configuration
-mcp.json                    -- MCP server reference (points to @pr-impact/tools)
-skill.md                    -- Assembled skill prompt (system prompt + report template)
-package.json                -- Build script only
+.claude-plugin/
+  plugin.json                -- Plugin metadata (name, version, description)
+.mcp.json                    -- MCP server reference (points to @pr-impact/tools via npx)
+skills/
+  pr-impact/
+    SKILL.md                 -- GENERATED: assembled skill prompt (do not edit)
+package.json                 -- Build script only
 ```
 
-**Build note:** The build script (`tsx ../../scripts/build-skill.ts`) assembles `skill.md` from `templates/system-prompt.md` and `templates/report-template.md`.
+**Build note:** The build script (`tsx ../../scripts/build-skill.ts`) assembles `skills/pr-impact/SKILL.md` from `templates/system-prompt.md` and `templates/report-template.md`.
 
 ### Shared templates
 
@@ -114,7 +117,7 @@ These are the single source of truth. Both `action` (via embed-templates.ts) and
 ```
 scripts/
   embed-templates.ts         -- Reads templates/*.md, generates action/src/generated/templates.ts
-  build-skill.ts             -- Reads templates/*.md, generates skill/skill.md
+  build-skill.ts             -- Reads templates/*.md, generates skill/skills/pr-impact/SKILL.md
 ```
 
 ## Code conventions
@@ -125,7 +128,7 @@ scripts/
 - **Linting** -- ESLint flat config (`eslint.config.mjs`) with `typescript-eslint` (type-checked), `@stylistic/eslint-plugin` (formatting), and `eslint-plugin-vitest` (test files). No Prettier needed.
 - **tsup** is used for bundling `tools-core`, `tools`, and `action`. The `skill` package uses a custom build script.
 - **Turbo** task graph: `build` depends on `^build` (dependency packages build first); `test` depends on `build`; `lint` depends on `^build`.
-- **Generated files** -- `packages/action/src/generated/templates.ts` and `packages/skill/skill.md` are auto-generated. Do not edit manually.
+- **Generated files** -- `packages/action/src/generated/templates.ts` and `packages/skill/skills/pr-impact/SKILL.md` are auto-generated. Do not edit manually.
 
 ## Key patterns
 

@@ -1,5 +1,11 @@
 # @pr-impact/action
 
+## 1.0.1
+
+### Patch Changes
+
+- @pr-impact/tools-core@1.0.1
+
 ## 1.0.0
 
 ### Major Changes

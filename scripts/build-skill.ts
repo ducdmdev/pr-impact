@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,13 +11,7 @@ const reportTemplate = readFileSync(resolve(rootDir, 'templates/report-template.
 const skillMd = `---
 name: pr-impact
 description: Analyze PR impact — breaking changes, test coverage gaps, doc staleness, impact graph, and risk score
-arguments:
-  - name: base
-    description: Base branch to compare against (default: main)
-    required: false
-  - name: head
-    description: Head branch to analyze (default: HEAD)
-    required: false
+argument-hint: "[base-branch] [head-branch]"
 ---
 
 ${systemPrompt}
@@ -33,6 +27,8 @@ Use the pr-impact MCP tools to inspect the repository. Follow all 6 analysis ste
 ${reportTemplate}
 `;
 
-writeFileSync(resolve(rootDir, 'packages/skill/skill.md'), skillMd, 'utf-8');
+const outDir = resolve(rootDir, 'packages/skill/skills/pr-impact');
+mkdirSync(outDir, { recursive: true });
+writeFileSync(resolve(outDir, 'SKILL.md'), skillMd, 'utf-8');
 
-console.log('Generated packages/skill/skill.md');
+console.log('Generated packages/skill/skills/pr-impact/SKILL.md');

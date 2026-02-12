@@ -185,9 +185,9 @@ pr-impact/
 │   │       └── generated/      Build-time embedded templates
 │   │
 │   └── skill/                  @pr-impact/skill
-│       ├── .claude-plugin/     Claude Code plugin config
-│       ├── mcp.json            MCP server reference
-│       └── skill.md            Assembled skill prompt (built from templates)
+│       ├── .claude-plugin/     Claude Code plugin config (plugin.json)
+│       ├── .mcp.json           MCP server reference
+│       └── skills/pr-impact/   Assembled skill prompt (SKILL.md, built from templates)
 │
 ├── templates/
 │   ├── system-prompt.md        System prompt for Claude analysis
@@ -195,7 +195,7 @@ pr-impact/
 │
 ├── scripts/
 │   ├── embed-templates.ts      Generates action/src/generated/templates.ts
-│   └── build-skill.ts          Assembles skill/skill.md from templates
+│   └── build-skill.ts          Assembles skill/skills/pr-impact/SKILL.md from templates
 │
 ├── turbo.json                  Turborepo task configuration
 ├── pnpm-workspace.yaml         Workspace definition
@@ -260,7 +260,7 @@ npx vitest run packages/action/__tests__/FILE.test.ts  # Run a single test file
 - **tsup** for building -- `tools-core`, `tools`, and `action` use tsup. `skill` uses a custom build script.
 - **Vitest** for testing -- tests live in `__tests__/` directories.
 - **Turborepo** for orchestration -- `pnpm build` runs in dependency order (`tools-core` before `tools` and `action`).
-- **Templates are embedded at build time** -- the action's `prebuild` script generates `src/generated/templates.ts`. The skill's build script generates `skill.md`.
+- **Templates are embedded at build time** -- the action's `prebuild` script generates `src/generated/templates.ts`. The skill's build script generates `skills/pr-impact/SKILL.md`.
 
 ### Contributing
 

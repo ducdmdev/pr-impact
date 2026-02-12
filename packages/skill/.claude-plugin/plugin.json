@@ -1,0 +1,11 @@
+{
+  "name": "pr-impact",
+  "version": "1.0.1",
+  "description": "AI-powered PR impact analysis — detect breaking changes, map blast radius, score risk",
+  "author": {
+    "name": "ducdmdev"
+  },
+  "repository": "https://github.com/ducdmdev/pr-impact",
+  "license": "MIT",
+  "keywords": ["pr", "analysis", "breaking-changes", "risk-score"]
+}

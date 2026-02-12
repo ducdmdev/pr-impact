@@ -1,12 +1,12 @@
 {
   "name": "@pr-impact/skill",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Claude Code skill for AI-powered PR impact analysis",
   "license": "MIT",
   "files": [
     ".claude-plugin",
-    "skill.md",
-    "mcp.json"
+    ".mcp.json",
+    "skills"
   ],
   "scripts": {
     "build": "tsx ../../scripts/build-skill.ts"

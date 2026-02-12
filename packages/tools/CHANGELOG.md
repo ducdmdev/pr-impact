@@ -1,5 +1,18 @@
 # @pr-impact/tools
 
+## 1.0.1
+
+### Patch Changes
+
+- Fix Claude Code plugin structure for correct skill and MCP server registration.
+
+  - Rename `.claude-plugin/config.json` to `plugin.json` (required by Claude Code)
+  - Rename `mcp.json` to `.mcp.json` with flat format (matches Claude Code convention)
+  - Move `skill.md` to `skills/pr-impact/SKILL.md` (auto-discovered by Claude Code)
+  - Replace unsupported `arguments` frontmatter with `argument-hint`
+  - Remove explicit `skills`/`mcpServers` fields from plugin.json (auto-discovery)
+  - @pr-impact/tools-core@1.0.1
+
 ## 1.0.0
 
 ### Major Changes

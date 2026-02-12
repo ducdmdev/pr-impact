@@ -1,6 +1,6 @@
 {
   "name": "@pr-impact/tools",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server providing git/repo tools for AI-powered PR impact analysis",
   "type": "module",
   "main": "./dist/index.js",

@@ -41,14 +41,14 @@ describe('embed-templates.ts output', () => {
 
 describe('build-skill.ts output', () => {
   const skillMd = readFileSync(
-    resolve(rootDir, 'packages/skill/skill.md'),
+    resolve(rootDir, 'packages/skill/skills/pr-impact/SKILL.md'),
     'utf-8',
   );
 
   it('contains YAML frontmatter with skill metadata', () => {
     expect(skillMd).toMatch(/^---\nname: pr-impact/);
     expect(skillMd).toContain('description:');
-    expect(skillMd).toContain('arguments:');
+    expect(skillMd).toContain('argument-hint:');
   });
 
   it('contains the system prompt content', () => {

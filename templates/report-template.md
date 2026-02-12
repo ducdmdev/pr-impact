@@ -2,12 +2,15 @@ Output your analysis using exactly this structure. Fill in all sections. If a se
 
 # PR Impact Report
 
+**Branch:** `{head}` → `{base}`
+**Date:** {YYYY-MM-DD}
+
 ## Summary
 - **Risk Score**: {score}/100 ({level})
 - **Files Changed**: {total} ({source} source, {test} test, {doc} doc, {config} config, {other} other)
 - **Total Lines Changed**: {additions} additions, {deletions} deletions
 - **Breaking Changes**: {count} ({high} high, {medium} medium, {low} low)
-- **Test Coverage**: {ratio}% of changed source files have corresponding test updates
+- **Test Coverage**: {raw_ratio}% of changed source files have test updates ({adjusted_ratio}% adjusted — excludes files with no pre-existing tests)
 - **Stale Doc References**: {count}
 - **Impact Breadth**: {direct} directly changed, {indirect} indirectly affected
 
@@ -49,6 +52,8 @@ Output your analysis using exactly this structure. Fill in all sections. If a se
 | Impact breadth | {0-100} | 0.10 | {score*0.10} | {count} indirectly affected files |
 | **Total** | | **1.00** | **{total}** | |
 
+> **Risk Context:** {1-2 sentences explaining any structural inflation or mitigating factors that affect interpretation of the raw score}
+
 ## Recommendations
 
 Based on the analysis above, here are the recommended actions before merging:
@@ -56,3 +61,5 @@ Based on the analysis above, here are the recommended actions before merging:
 1. {actionable recommendation with specific file/symbol references}
 2. {actionable recommendation}
 3. {actionable recommendation}
+
+{If risk score >= 76: **Rollback Strategy:** specific steps to revert this change if issues are discovered post-merge, including any data migration or config rollback needs}

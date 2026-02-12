@@ -141,10 +141,10 @@ score = sum(factor_score * factor_weight)
 | Factor | Weight | Scoring Logic |
 |---|---|---|
 | **Breaking changes** | 0.30 | `100` if any high-severity, `60` if medium, `30` if low-only, `0` if none |
-| **Untested changes** | 0.25 | `(1 - coverageRatio) * 100` -- higher when changed source files lack test updates |
-| **Diff size** | 0.15 | `0` if <100 lines, `50` if 100-500, `80` if 500-1000, `100` if >1000 |
+| **Untested changes** | 0.25 | `(1 - adjustedCoverageRatio) * 100` -- uses adjusted ratio that excludes files with no pre-existing test infrastructure |
+| **Diff size** | 0.15 | `0` if <100 lines, `50` if 100-500, `80` if 500-1000, `100` if >1000. Mechanical changes (3+ near-identical diffs) counted as one representative change. |
 | **Stale documentation** | 0.10 | `min(staleReferences * 20, 100)` -- each stale reference adds 20 points |
-| **Config file changes** | 0.10 | `100` if CI/build config changed, `50` if other config, `0` if none |
+| **Config file changes** | 0.10 | `100` CI/build config, `75` deployment config, `50` other config, `25` env templates/lockfiles, `0` none -- uses highest tier present |
 | **Impact breadth** | 0.10 | `min(indirectlyAffected * 10, 100)` -- each affected file adds 10 points |
 
 ### Risk Levels

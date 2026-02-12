@@ -141,10 +141,10 @@ scripts/
 - **Risk score parsing is explicit** -- if parsing fails, logs warning and skips threshold check instead of false-failing.
 - **Risk scoring** uses six weighted factors:
   - Breaking changes -- weight 0.30
-  - Untested changes -- weight 0.25
-  - Diff size -- weight 0.15
+  - Untested changes -- weight 0.25 (uses adjusted coverage ratio excluding files with no pre-existing tests)
+  - Diff size -- weight 0.15 (mechanical changes collapsed into one representative change)
   - Stale documentation -- weight 0.10
-  - Config file changes -- weight 0.10
+  - Config file changes -- weight 0.10 (4-tier: CI/build 100, deployment 75, other config 50, env templates/lockfiles 25)
   - Impact breadth -- weight 0.10
 
 ## Testing guidelines

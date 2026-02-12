@@ -1,6 +1,6 @@
 {
   "name": "@pr-impact/action",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "GitHub Action for AI-powered PR impact analysis",
   "type": "module",

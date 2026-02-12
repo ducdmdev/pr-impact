@@ -19,9 +19,21 @@
       "homepage": "https://github.com/ducdmdev/pr-impact",
       "repository": "https://github.com/ducdmdev/pr-impact",
       "license": "MIT",
-      "keywords": ["pr", "analysis", "breaking-changes", "risk-score", "code-review"],
+      "keywords": [
+        "pr",
+        "analysis",
+        "breaking-changes",
+        "risk-score",
+        "code-review"
+      ],
       "category": "code-review",
-      "tags": ["pull-request", "impact-analysis", "risk-scoring", "breaking-changes", "test-coverage"]
+      "tags": [
+        "pull-request",
+        "impact-analysis",
+        "risk-scoring",
+        "breaking-changes",
+        "test-coverage"
+      ]
     }
   ]
 }

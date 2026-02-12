@@ -8,7 +8,12 @@
   "homepage": "https://github.com/ducdmdev/pr-impact",
   "repository": "https://github.com/ducdmdev/pr-impact",
   "license": "MIT",
-  "keywords": ["pr", "analysis", "breaking-changes", "risk-score"],
+  "keywords": [
+    "pr",
+    "analysis",
+    "breaking-changes",
+    "risk-score"
+  ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json"
 }

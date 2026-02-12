@@ -1,162 +1,157 @@
-# CLAUDE.md — pr-impact
+# CLAUDE.md -- pr-impact
 
 ## Project overview
 
-pr-impact is a PR analysis tool that detects breaking changes, test coverage gaps, stale documentation, and import-graph impact for pull requests. It produces a weighted risk score and generates Markdown or JSON reports.
+pr-impact is an AI-powered PR analysis tool that detects breaking changes, test coverage gaps, stale documentation, and import-graph impact for pull requests. It uses Claude to analyze diffs via tool calls and produces a weighted risk score with a structured Markdown report.
 
-This is a **pnpm monorepo** managed with **Turborepo**. The workspace is defined in `pnpm-workspace.yaml` and contains three packages under `packages/`.
+This is a **pnpm monorepo** managed with **Turborepo**. The workspace is defined in `pnpm-workspace.yaml` and contains four packages under `packages/`.
 
 ## Quick commands
 
 ```bash
-pnpm build                                    # Build all packages (via turbo, respects dependency order)
-pnpm test                                     # Run all tests (vitest, workspace mode)
-npx vitest run packages/core/__tests__/FILE.test.ts  # Run a single test file
-pnpm lint                                     # Lint all packages (ESLint flat config)
-pnpm lint:fix                                 # Lint and auto-fix
-pnpm build --filter=@pr-impact/core           # Build only @pr-impact/core
-pnpm build --filter=@pr-impact/cli            # Build only @pr-impact/cli
-pnpm clean                                    # Remove all dist/ directories
-pnpm changeset                                # Create a new changeset for versioning
-pnpm version-packages                         # Apply changesets and bump versions
-pnpm release                                  # Build all packages and publish to npm
+pnpm build                                        # Build all packages (via turbo, respects dependency order)
+pnpm test                                          # Run all tests (vitest)
+npx vitest run packages/action/__tests__/FILE.test.ts  # Run a single test file
+pnpm lint                                          # Lint all packages (ESLint flat config)
+pnpm lint:fix                                      # Lint and auto-fix
+pnpm build --filter=@pr-impact/tools-core          # Build only tools-core
+pnpm build --filter=@pr-impact/action              # Build only action (includes prebuild for templates)
+pnpm clean                                         # Remove all dist/ directories
 ```
 
 ## Architecture
 
 ```
 packages/
-  core/       @pr-impact/core      — Analysis engine. Pure logic, no I/O except git via simple-git.
-  cli/        @pr-impact/cli       — Commander-based CLI (`pri`). Depends on core.
-  mcp-server/ @pr-impact/mcp-server — MCP server exposing tools to LLMs. Depends on core.
+  tools-core/  @pr-impact/tools-core  -- Pure tool handler functions. No framework dependency.
+  tools/       @pr-impact/tools       -- MCP server wrapping tools-core. Depends on tools-core.
+  action/      @pr-impact/action      -- GitHub Action with agentic Claude loop. Depends on tools-core.
+  skill/       @pr-impact/skill       -- Claude Code plugin (no runtime deps, built from templates).
 ```
 
-### packages/core (the main package)
+### Dependency graph
 
-All analysis logic lives here. Source is organized by analysis layer:
+```
+@pr-impact/tools  ────> @pr-impact/tools-core
+@pr-impact/action ────> @pr-impact/tools-core
+@pr-impact/skill        (no runtime dependencies)
+```
+
+### packages/tools-core (shared foundation)
+
+Pure handler functions for git/repo operations. Both `tools` (MCP) and `action` (GitHub Action) import from here.
 
 ```
 src/
-  analyzer.ts               — Top-level analyzePR() orchestrator (runs steps in parallel)
-  types.ts                  — All shared TypeScript interfaces
-  index.ts                  — Barrel exports for the public API
-  diff/
-    diff-parser.ts          — Parse git diff into ChangedFile[]
-    file-categorizer.ts     — Classify files as source/test/doc/config/other
-  breaking/
-    detector.ts             — Detect breaking changes across changed files
-    export-differ.ts        — Diff exported symbols between base and head (regex-based)
-    signature-differ.ts     — Compare function/class signatures for changes
-  coverage/
-    coverage-checker.ts     — Check whether changed source files have test changes
-    test-mapper.ts          — Map source files to their expected test files
-  docs/
-    staleness-checker.ts    — Find stale references in doc files
-  imports/
-    import-resolver.ts      — Resolve import paths and find consumers of changed files
-  impact/
-    impact-graph.ts         — Build import dependency graph from changed files
-  risk/
-    risk-calculator.ts      — Calculate weighted risk score from all factors
-    factors.ts              — Individual risk factor evaluators with weights
-  output/
-    markdown-reporter.ts    — Format PRAnalysis as Markdown
-    json-reporter.ts        — Format PRAnalysis as JSON
+  index.ts                  -- Barrel exports for all handlers and types
+  tool-defs.ts              -- Canonical tool definitions (TOOL_DEFS, ToolDef, ToolParamDef)
+  tools/
+    git-diff.ts             -- Get raw git diff between two refs
+    read-file.ts            -- Read file content at a specific git ref
+    list-files.ts           -- List changed files with status and stats
+    search-code.ts          -- Search for regex patterns via git grep
+    find-imports.ts         -- Find files that import a given module (cached)
+    list-tests.ts           -- Find test files associated with a source file
 ```
 
-### packages/cli
+Dependencies: simple-git, fast-glob.
 
-Commander-based CLI binary (`pri`). Commands live in `src/commands/`:
-- `analyze.ts` — full analysis
-- `breaking.ts` — breaking changes only
-- `comment.ts` — post analysis report as PR comment (upsert via HTML markers)
-- `impact.ts` — impact graph only
-- `risk.ts` — risk score only
+### packages/tools (MCP server)
 
-GitHub integration helpers live in `src/github/`:
-- `ci-env.ts` — auto-detect PR number and repo from CI environment variables
-- `comment-poster.ts` — create/update PR comments via GitHub API (native fetch)
+Thin MCP server wrapping tools-core handlers with zod schemas:
 
-Dependencies: commander, chalk, ora.
+```
+src/
+  index.ts                  -- MCP server entry point (stdio transport)
+  register.ts               -- Tool registration with zod input schemas
+```
 
-### packages/mcp-server
+Dependencies: @modelcontextprotocol/sdk, zod, @pr-impact/tools-core.
 
-MCP server exposing tools via `@modelcontextprotocol/sdk`. Tool definitions live in `src/tools/`:
-- `analyze-diff.ts`
-- `get-breaking-changes.ts`
-- `get-impact-graph.ts`
-- `get-risk-score.ts`
+### packages/action (GitHub Action)
 
-Dependencies: @modelcontextprotocol/sdk, zod.
+GitHub Action that runs an agentic Claude loop to analyze PRs:
+
+```
+src/
+  index.ts                  -- GitHub Action entry point (reads inputs, runs analysis, posts comment)
+  client.ts                 -- Anthropic API client with 30-iteration limit, 180s timeout, temperature 0
+  tools.ts                  -- Tool dispatcher (switch on tool name, calls tools-core)
+  comment.ts                -- PR comment poster (upsert via HTML markers)
+  generated/
+    templates.ts            -- Auto-generated at build time from templates/*.md
+```
+
+Dependencies: @anthropic-ai/sdk, @actions/core, @actions/github, @pr-impact/tools-core.
+
+**Build note:** The `prebuild` script runs `tsx ../../scripts/embed-templates.ts` to generate `src/generated/templates.ts` before tsup bundles. Output is CJS (`dist/index.cjs`) because GitHub Actions requires CommonJS. All dependencies are bundled via `noExternal: [/.*/]`.
+
+### packages/skill (Claude Code plugin)
+
+Claude Code plugin that provides the `/pr-impact` slash command:
+
+```
+.claude-plugin/config.json  -- Plugin configuration
+mcp.json                    -- MCP server reference (points to @pr-impact/tools)
+skill.md                    -- Assembled skill prompt (system prompt + report template)
+package.json                -- Build script only
+```
+
+**Build note:** The build script (`tsx ../../scripts/build-skill.ts`) assembles `skill.md` from `templates/system-prompt.md` and `templates/report-template.md`.
+
+### Shared templates
+
+```
+templates/
+  system-prompt.md           -- System prompt for Claude analysis (analysis steps, rules, scoring)
+  report-template.md         -- Report output format template (sections, tables)
+```
+
+These are the single source of truth. Both `action` (via embed-templates.ts) and `skill` (via build-skill.ts) consume them at build time.
+
+### Build scripts
+
+```
+scripts/
+  embed-templates.ts         -- Reads templates/*.md, generates action/src/generated/templates.ts
+  build-skill.ts             -- Reads templates/*.md, generates skill/skill.md
+```
 
 ## Code conventions
 
-- **ESM only** — all packages use `"type": "module"`. Use `.js` extensions in all import paths (even for `.ts` source files), e.g. `import { parseDiff } from './diff/diff-parser.js'`.
-- **TypeScript strict mode** — `tsconfig.base.json` sets `"strict": true`, target ES2022, module ES2022 with bundler resolution.
-- **All shared types** are defined in `packages/core/src/types.ts`. Import types from there.
-- **Barrel exports** — the public API of `@pr-impact/core` is defined in `packages/core/src/index.ts`. Any new public function or type must be re-exported from this file.
-- **Linting** — ESLint flat config (`eslint.config.mjs`) with `typescript-eslint` (type-checked), `@stylistic/eslint-plugin` (formatting), and `eslint-plugin-vitest` (test files). No Prettier needed.
-- **tsup** is used for bundling all packages. Config: ESM format, dts generation, sourcemaps, clean output.
+- **ESM only** -- all packages use `"type": "module"`. Use `.js` extensions in all import paths (even for `.ts` source files), e.g. `import { gitDiff } from './tools/git-diff.js'`.
+- **CJS exception** -- the `action` package builds to CJS format (`dist/index.cjs`) because GitHub Actions requires CommonJS. Source code is still ESM.
+- **TypeScript strict mode** -- `tsconfig.base.json` sets `"strict": true`, target ES2022, module ES2022 with bundler resolution.
+- **Linting** -- ESLint flat config (`eslint.config.mjs`) with `typescript-eslint` (type-checked), `@stylistic/eslint-plugin` (formatting), and `eslint-plugin-vitest` (test files). No Prettier needed.
+- **tsup** is used for bundling `tools-core`, `tools`, and `action`. The `skill` package uses a custom build script.
 - **Turbo** task graph: `build` depends on `^build` (dependency packages build first); `test` depends on `build`; `lint` depends on `^build`.
-- **Changesets** — `@changesets/cli` manages versioning and changelogs. All three packages use fixed versioning (same version number). Release workflow in `.github/workflows/release.yml` auto-creates "Version Packages" PRs and publishes to npm on merge to `main`.
+- **Generated files** -- `packages/action/src/generated/templates.ts` and `packages/skill/skill.md` are auto-generated. Do not edit manually.
 
 ## Key patterns
 
 - **Git operations** use `simple-git` (the `simpleGit()` function). All git calls go through this library, never raw `child_process`.
 - **File discovery** uses `fast-glob` for finding files in the repo.
-- **Export parsing** uses **regex-based parsing** (not tree-sitter or AST). See `export-differ.ts`.
-- **Risk scoring** uses six weighted factors (defined in `risk/factors.ts`):
-  - Breaking changes — weight 0.30
-  - Untested changes — weight 0.25
-  - Diff size — weight 0.15
-  - Stale documentation — weight 0.10
-  - Config file changes — weight 0.10
-  - Impact breadth — weight 0.10
-- **Parallel analysis** — `analyzePR()` runs breaking-change detection, test coverage, doc staleness, and impact graph building concurrently via `Promise.all`.
-
-## Documentation
-
-Detailed documentation lives in `docs/`:
-
-### Adoption Guides
-
-| Document | Description |
-|---|---|
-| [`docs/getting-started.md`](docs/getting-started.md) | Installation, first run, understanding the output, common workflows |
-| [`docs/ci-integration.md`](docs/ci-integration.md) | GitHub Actions, GitLab CI, CircleCI, Jenkins examples, exit codes, thresholds, PR comments |
-| [`docs/mcp-integration.md`](docs/mcp-integration.md) | MCP server architecture, 4 available tools with parameters, tool registration pattern, client configuration (Claude Code, Claude Desktop, Cursor, VS Code), manual testing with MCP Inspector |
-| [`docs/programmatic-api.md`](docs/programmatic-api.md) | Using `@pr-impact/core` as a library, individual analysis steps, types, error handling, custom CI scripts |
-| [`docs/configuration-guide.md`](docs/configuration-guide.md) | Threshold selection, skipping analysis steps, monorepo considerations, impact depth, output formats |
-| [`docs/troubleshooting.md`](docs/troubleshooting.md) | Git errors, shallow clones, false positives, test coverage issues, CI integration, MCP server problems |
-
-### Internal Architecture
-
-| Document | Description |
-|---|---|
-| [`docs/architecture.md`](docs/architecture.md) | Monorepo layout, package dependency graph, build pipeline, core module organization, external dependencies, design principles |
-| [`docs/analysis-pipeline.md`](docs/analysis-pipeline.md) | The 6-step `analyzePR()` pipeline, sequence diagram, skip behavior, entry points (CLI / MCP / programmatic) |
-| [`docs/data-flow.md`](docs/data-flow.md) | Type relationships (ER diagram), data flow through the pipeline, internal types, module-to-type mapping |
-| [`docs/risk-scoring.md`](docs/risk-scoring.md) | Risk formula, 6 factor weights and scoring logic, score-to-level mapping, worked example |
+- **`find_importers` caches the reverse dependency map** -- built on first call, reused within the same session. Call `clearImporterCache()` to reset.
+- **Tool handlers return plain objects** -- the MCP wrapper (`tools`) handles formatting as MCP ToolResult. The action dispatcher (`action/tools.ts`) handles stringification.
+- **Templates are embedded at build time** -- no filesystem reads at runtime for prompts or report formats.
+- **Client has safety limits** -- 30-iteration max, 180-second wall-clock timeout, `temperature: 0` for consistency.
+- **Risk score parsing is explicit** -- if parsing fails, logs warning and skips threshold check instead of false-failing.
+- **Risk scoring** uses six weighted factors:
+  - Breaking changes -- weight 0.30
+  - Untested changes -- weight 0.25
+  - Diff size -- weight 0.15
+  - Stale documentation -- weight 0.10
+  - Config file changes -- weight 0.10
+  - Impact breadth -- weight 0.10
 
 ## Testing guidelines
 
-- Tests use **vitest** and live in `packages/core/__tests__/`.
-- Test file naming convention: `MODULE_NAME.test.ts` (e.g. `export-differ.test.ts`, `risk-calculator.test.ts`).
-- Only the `packages/core` workspace is included in the vitest workspace config (`vitest.workspace.ts`).
-- Write **unit tests only** — do not write integration tests that require a real git repository.
-- **Mock git operations** (simple-git calls) where needed; tests should not depend on filesystem or git state.
-- Existing test files:
-  - `analyzer.test.ts`
-  - `coverage-checker.test.ts`
-  - `detector.test.ts`
-  - `diff-parser.test.ts`
-  - `export-differ.test.ts`
-  - `file-categorizer.test.ts`
-  - `impact-graph.test.ts`
-  - `import-resolver.test.ts`
-  - `json-reporter.test.ts`
-  - `markdown-reporter.test.ts`
-  - `risk-calculator.test.ts`
-  - `signature-differ.test.ts`
-  - `staleness-checker.test.ts`
-  - `test-mapper.test.ts`
+- Tests use **vitest** and live in `__tests__/` directories within each package.
+- Test file naming convention: `MODULE_NAME.test.ts` (e.g. `git-diff.test.ts`, `tools.test.ts`).
+- Vitest projects are configured in `vitest.config.ts` (root) with `packages/tools-core`, `packages/tools`, and `packages/action`.
+- Write **unit tests only** -- do not write integration tests that require a real git repository.
+- **Mock git operations** (simple-git calls) and external dependencies where needed; tests should not depend on filesystem or git state.
+- Test files per package (14 files, 100 tests):
+  - `packages/tools-core/__tests__/`: git-diff, read-file, list-files, search-code, find-imports, list-tests, regression (7 files)
+  - `packages/tools/__tests__/`: index, register, build-scripts (3 files)
+  - `packages/action/__tests__/`: tools, client, comment, index (4 files)

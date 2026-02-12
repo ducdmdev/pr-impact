@@ -1,0 +1,36 @@
+name: 'PR Impact Analysis'
+description: 'AI-powered PR impact analysis — detect breaking changes, map blast radius, and score risk'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  anthropic-api-key:
+    description: 'Anthropic API key for Claude'
+    required: true
+  base-branch:
+    description: 'Base branch to compare against'
+    required: false
+    default: 'main'
+  model:
+    description: 'Claude model to use'
+    required: false
+    default: 'claude-sonnet-4-5-20250929'
+  threshold:
+    description: 'Risk score threshold — action fails if risk score >= this value'
+    required: false
+  github-token:
+    description: 'GitHub token for posting PR comments. Pass ${{ secrets.GITHUB_TOKEN }} in your workflow.'
+    required: false
+
+outputs:
+  risk-score:
+    description: 'The calculated risk score (0-100)'
+  risk-level:
+    description: 'The risk level (low/medium/high/critical)'
+  report:
+    description: 'The full markdown report'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.cjs'

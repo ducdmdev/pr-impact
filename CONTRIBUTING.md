@@ -21,16 +21,17 @@ pnpm build
 ### Build
 
 ```bash
-pnpm build                             # Build all packages (Turborepo, dependency order)
-pnpm build --filter=@pr-impact/core    # Build a single package
+pnpm build                                 # Build all packages (Turborepo, dependency order)
+pnpm build --filter=@pr-impact/tools-core  # Build a single package
 ```
+
+Build order: `tools-core` builds first, then `tools` and `action` (in parallel), then `skill`.
 
 ### Test
 
 ```bash
-pnpm test                              # Run all tests
-npx vitest run packages/core/__tests__/FILE.test.ts  # Run a single test file
-pnpm test:watch                        # Watch mode
+pnpm test                                              # Run all tests
+npx vitest run packages/tools-core/__tests__/FILE.test.ts  # Run a single test file
 ```
 
 ### Lint
@@ -44,26 +45,27 @@ pnpm lint:fix                          # Auto-fix
 
 ```
 packages/
-  core/        @pr-impact/core       Analysis engine (pure logic)
-  cli/         @pr-impact/cli        Commander CLI (pri)
-  mcp-server/  @pr-impact/mcp-server MCP server for AI assistants
+  tools-core/  @pr-impact/tools-core  Pure tool handler functions (shared foundation)
+  tools/       @pr-impact/tools       MCP server (wraps tools-core)
+  action/      @pr-impact/action      GitHub Action (agentic Claude loop)
+  skill/       @pr-impact/skill       Claude Code plugin (built from templates)
 ```
 
-`core` has no workspace dependencies. Both `cli` and `mcp-server` depend on `core`.
+`tools-core` has no workspace dependencies. Both `tools` and `action` depend on `tools-core`. The `skill` package has no runtime dependencies.
 
 ## Code Conventions
 
 - **ESM only** -- use `.js` extensions in all import paths (even for `.ts` files)
+- **CJS exception** -- the `action` package builds to CJS for GitHub Actions compatibility
 - **TypeScript strict mode** -- no `any` unless unavoidable
-- **Shared types** go in `packages/core/src/types.ts`
-- **Public API** must be re-exported from `packages/core/src/index.ts`
 - **No Prettier** -- formatting is handled by `@stylistic/eslint-plugin`
+- **Generated files** -- do not edit `packages/action/src/generated/templates.ts` or `packages/skill/skill.md` manually; they are built from `templates/*.md`
 
 ## Writing Tests
 
 - Tests use **vitest** and live in `__tests__/` directories
 - Write **unit tests only** -- do not depend on real git repos or filesystem state
-- Mock `simple-git` calls where needed
+- Mock `simple-git` calls and external dependencies where needed
 - Name test files: `MODULE_NAME.test.ts`
 
 ## Submitting Changes
@@ -96,7 +98,6 @@ The changeset file will be committed with your PR. The release workflow handles 
 - Bug fixes (patch)
 - New features (minor)
 - Breaking changes (major)
-- Documentation changes that affect the published package README (patch)
 
 ### What Doesn't Need a Changeset
 
@@ -106,7 +107,7 @@ The changeset file will be committed with your PR. The release workflow handles 
 ## Reporting Issues
 
 Open an issue at [github.com/ducdmdev/pr-impact/issues](https://github.com/ducdmdev/pr-impact/issues) with:
-- The command you ran
+- What you were trying to do
 - Expected vs actual behavior
 - Node.js and pnpm versions
 - OS

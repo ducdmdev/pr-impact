@@ -1,5 +1,11 @@
 # @pr-impact/skill
 
+## 1.0.3
+
+### Patch Changes
+
+- a4192e2: Add preconditions to /pr-impact skill (git repo check, branch detection, gh auth, empty diff guard)
+
 ## 1.0.1
 
 ### Patch Changes

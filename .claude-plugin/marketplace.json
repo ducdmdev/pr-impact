@@ -5,13 +5,13 @@
     "name": "ducdmdev"
   },
   "metadata": {
-    "version": "1.0.2"
+    "version": "1.0.3"
   },
   "plugins": [
     {
       "name": "pr-impact",
       "description": "Analyze PRs for breaking changes, test coverage gaps, stale documentation, and import-graph impact with a weighted risk score",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "source": "./packages/skill",
       "author": {
         "name": "ducdmdev"
